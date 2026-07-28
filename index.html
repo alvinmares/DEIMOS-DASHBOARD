@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Lifecycle CR/1k — DHL Dashboard</title>
+<title>Lifecycle TR/1k — DHL Dashboard</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
@@ -101,8 +101,8 @@ tfoot td:not(:first-child){text-align:right;}
 <!-- ══════════════════════ SIDEBAR ══════════════════════ -->
 <nav class="sidebar">
   <div class="sidebar-logo">
-    <h2>Lifecycle CR/1k</h2>
-    <p id="sidebarPeriod">ene 2026 – 16 jul 2026</p>
+    <h2>Lifecycle TR/1k</h2>
+    <p id="sidebarPeriod">ene 2026 – 28 jul 2026</p>
   </div>
 
   <!-- Vista -->
@@ -169,7 +169,7 @@ tfoot td:not(:first-child){text-align:right;}
   <div class="filter-section">
     <div class="filter-label">Métrica</div>
     <div class="toggle-row">
-      <button class="toggle-btn active" onclick="setMetric('cr',this)">CR/1k</button>
+      <button class="toggle-btn active" onclick="setMetric('cr',this)">TR/1k</button>
       <button class="toggle-btn" onclick="setMetric('tickets',this)">Tickets</button>
       <button class="toggle-btn" onclick="setMetric('envios',this)">Envíos</button>
     </div>
@@ -203,12 +203,12 @@ tfoot td:not(:first-child){text-align:right;}
 <!-- ══ RESUMEN ══ -->
 <div id="resumen" class="page active">
   <div class="page-header">
-    <h1>CR / 1k Envíos — Ene–Jul 2026</h1>
-    <p id="resumenSub">Tickets lifecycle / envíos × 1,000 · ene 2026 – 16 jul 2026 <span class="partial-badge">Jul parcial</span></p>
+    <h1>Ticket Rate / 1k Envíos — Ene–Jul 2026</h1>
+    <p id="resumenSub">Tickets lifecycle / envíos × 1,000 · ene 2026 – 28 jul 2026 <span class="partial-badge">Jul parcial</span></p>
   </div>
   <div class="kpi-grid" id="kpiGrid"></div>
   <div class="card">
-    <div class="card-title">CR / 1k envíos por mes y carrier</div>
+    <div class="card-title">Ticket Rate / 1k envíos por mes y carrier</div>
 
     <div style="position:relative;height:340px;"><canvas id="chartResumen"></canvas></div>
   </div>
@@ -225,19 +225,19 @@ tfoot td:not(:first-child){text-align:right;}
 <!-- ══ TENDENCIA ══ -->
 <div id="tendencia" class="page">
   <div class="page-header">
-    <h1>Tendencia CR / 1k</h1>
+    <h1>Tendencia TR / 1k</h1>
     <p>Evolución mensual por carrier · selección activa <span class="partial-badge">Jul parcial</span></p>
   </div>
   <div class="card">
     <div class="card-title">Línea de tendencia</div>
-    <div class="card-sub">CR/1k mes a mes · hover para detalle</div>
+    <div class="card-sub">TR/1k mes a mes · hover para detalle</div>
     <div style="position:relative;height:340px;"><canvas id="chartLinea"></canvas></div>
   </div>
   <div class="card">
-    <div class="card-title">CR/1k por carrier y mes</div>
+    <div class="card-title">TR/1k por carrier y mes</div>
     <div class="card-sub">Verde &lt;5 · Amarillo 5–7 · Naranja 7–10 · Rojo &gt;10</div>
     <div style="overflow-x:auto;"><table id="tendTable"></table></div>
-    <p class="footnote">* Jul 2026 parcial al 9 jul</p>
+    <p class="footnote">* Jul 2026 parcial al 28 jul</p>
   </div>
 </div>
 
@@ -245,7 +245,7 @@ tfoot td:not(:first-child){text-align:right;}
 <div id="carrier" class="page">
   <div class="page-header">
     <h1>Por Carrier</h1>
-    <p>CR/1k mensual · selección activa</p>
+    <p>TR/1k mensual · selección activa</p>
   </div>
   <div id="carrierCards"></div>
 </div>
@@ -254,13 +254,13 @@ tfoot td:not(:first-child){text-align:right;}
 <div id="tabla" class="page">
   <div class="page-header">
     <h1>Tabla Detalle</h1>
-    <p>Tickets, envíos y CR/1k · selección activa <span class="partial-badge">Jul parcial</span></p>
+    <p>Tickets, envíos y TR/1k · selección activa <span class="partial-badge">Jul parcial</span></p>
   </div>
   <div class="card">
     <div class="card-title">Detalle mensual completo</div>
     <div class="card-sub">Verde &lt;5 · Amarillo 5–7 · Naranja 7–10 · Rojo &gt;10</div>
     <div style="overflow-x:auto;"><table id="tablaDetalle"></table></div>
-    <p class="footnote">* Jul 2026 parcial al 9 jul · Envíos: Frodo deliveries · Tickets: Lifecycle survey</p>
+    <p class="footnote">* Jul 2026 parcial al 28 jul · Envíos: Frodo deliveries · Tickets: Lifecycle survey</p>
   </div>
 </div>
 
@@ -268,7 +268,7 @@ tfoot td:not(:first-child){text-align:right;}
 <div id="quejas" class="page">
   <div class="page-header">
     <h1>¿De qué se quejan?</h1>
-    <p>Clasificación de motivos · ene 2026 – 16 jul 2026 · todos los carriers</p>
+    <p>Clasificación de motivos · ene 2026 – 28 jul 2026 · todos los carriers</p>
   </div>
 
   <div class="info-box">⚠️ <strong>Nota:</strong> "Falsa entrega sin detalle" (81–91% del total) no captura texto libre en el formulario — solo dirección y CP. Los motivos específicos se identificaron de los comentarios escritos por el agente en el resto de tickets.</div>
@@ -290,12 +290,12 @@ tfoot td:not(:first-child){text-align:right;}
       <div class="kpi"><div class="kpi-accent" style="background:#F4A020;"></div>
         <div class="kpi-val" style="color:#F4A020;">2.8%</div><div class="kpi-lbl">Devolución sin intentos</div><div class="kpi-note" style="color:#888;">18 tix</div></div>
       <div class="kpi"><div class="kpi-accent" style="background:#60A5FA;"></div>
-        <div class="kpi-val" style="color:#60A5FA;">638</div><div class="kpi-lbl">Total DHL · ene–jul</div><div class="kpi-note" style="color:#888;">CR/1k prom: 3.25</div></div>
+        <div class="kpi-val" style="color:#60A5FA;">638</div><div class="kpi-lbl">Total DHL · ene–jul</div><div class="kpi-note" style="color:#888;">TR/1k prom: 3.25</div></div>
     </div>
     <div class="grid2">
       <div class="card">
         <div class="card-title">Distribución por motivo — DHL</div>
-        <div class="card-sub">% del total de tickets · ene 2026 – 16 jul 2026</div>
+        <div class="card-sub">% del total de tickets · ene 2026 – 28 jul 2026</div>
         <div style="position:relative;height:300px;"><canvas id="chartQuejasDHL"></canvas></div>
       </div>
       <div class="card">
@@ -343,12 +343,12 @@ tfoot td:not(:first-child){text-align:right;}
       <div class="kpi"><div class="kpi-accent" style="background:#7B52B8;"></div>
         <div class="kpi-val" style="color:#7B52B8;">3.0%</div><div class="kpi-lbl">Prob. repartidor</div><div class="kpi-note" style="color:#888;">247 tix</div></div>
       <div class="kpi"><div class="kpi-accent" style="background:#26C6A0;"></div>
-        <div class="kpi-val" style="color:#26C6A0;">8,156</div><div class="kpi-lbl">Total Estafeta · ene–jul</div><div class="kpi-note" style="color:#888;">CR/1k prom: 4.51</div></div>
+        <div class="kpi-val" style="color:#26C6A0;">8,156</div><div class="kpi-lbl">Total Estafeta · ene–jul</div><div class="kpi-note" style="color:#888;">TR/1k prom: 4.51</div></div>
     </div>
     <div class="grid2">
       <div class="card">
         <div class="card-title">Distribución por motivo — Estafeta</div>
-        <div class="card-sub">% del total de tickets · ene 2026 – 16 jul 2026</div>
+        <div class="card-sub">% del total de tickets · ene 2026 – 28 jul 2026</div>
         <div style="position:relative;height:300px;"><canvas id="chartQuejasEstafeta"></canvas></div>
       </div>
       <div class="card">
@@ -400,12 +400,12 @@ tfoot td:not(:first-child){text-align:right;}
       <div class="kpi"><div class="kpi-accent" style="background:#F4A020;"></div>
         <div class="kpi-val" style="color:#F4A020;">2.1%</div><div class="kpi-lbl">Entrega cruzada</div><div class="kpi-note" style="color:#888;">166 tix</div></div>
       <div class="kpi"><div class="kpi-accent" style="background:#E040A0;"></div>
-        <div class="kpi-val" style="color:#E040A0;">7,806</div><div class="kpi-lbl">Total 99min · ene–jul</div><div class="kpi-note" style="color:#888;">CR/1k prom: 8.09</div></div>
+        <div class="kpi-val" style="color:#E040A0;">7,806</div><div class="kpi-lbl">Total 99min · ene–jul</div><div class="kpi-note" style="color:#888;">TR/1k prom: 8.09</div></div>
     </div>
     <div class="grid2">
       <div class="card">
         <div class="card-title">Distribución por motivo — 99min</div>
-        <div class="card-sub">% del total de tickets · ene 2026 – 16 jul 2026</div>
+        <div class="card-sub">% del total de tickets · ene 2026 – 28 jul 2026</div>
         <div style="position:relative;height:300px;"><canvas id="chartQuejas99min"></canvas></div>
       </div>
       <div class="card">
@@ -450,7 +450,7 @@ tfoot td:not(:first-child){text-align:right;}
 <div id="delivery" class="page">
   <div class="page-header">
     <h1>Delivery Rate</h1>
-    <p>Entregados / Total envíos · ene 2026 – 16 jul 2026 · higher is better <span class="partial-badge">Jul parcial</span></p>
+    <p>Entregados / Total envíos · ene 2026 – 28 jul 2026 · higher is better <span class="partial-badge">Jul parcial</span></p>
   </div>
 
   <div class="kpi-grid" id="kpiDR">
@@ -543,8 +543,8 @@ const ALL_MONTHS = ['Ene 26','Feb 26','Mar 26','Abr 26','May 26','Jun 26','Jul 2
 const CARRIER_COLORS = { 'DHL':'#60A5FA', 'Estafeta':'#26C6A0', '99min':'#E040A0' };
 
 const RAW = {
-  'DHL':     { cr:[3.68,3.28,1.76,3.48,4.99,3.39,2.18], tix:[135,68,68,108,134,96,29],  env:[36670,20730,38715,31077,26847,28307,13324] },
-  'Estafeta':{ cr:[3.81,5.43,2.82,5.68,5.80,4.58,3.45], tix:[1363,1005,1097,1669,1464,1144,414], env:[357730,185203,389275,293600,252491,250049,119860] },
+  'DHL':     { cr:[3.68,3.28,1.76,3.48,4.99,3.39,2.08], tix:[135,68,68,108,134,96,47],  env:[36670,20730,38715,31077,26847,28307,22638] },
+  'Estafeta':{ cr:[3.81,5.43,2.82,5.68,5.80,4.58,3.58], tix:[1363,1005,1097,1669,1464,1144,733], env:[357730,185203,389275,293600,252491,250049,204780] },
   '99min':   { cr:[8.29,11.54,6.06,10.56,9.92,6.44,3.81], tix:[1533,1114,1200,1617,1277,828,237], env:[185030,96497,197870,153179,128726,128506,62275] },
 };
 
@@ -575,7 +575,7 @@ function destroyChart(id){if(charts[id]){charts[id].destroy();delete charts[id];
 const XOPTS={ticks:{color:'#555',font:{size:10},maxRotation:0},grid:{display:false},border:{display:false}};
 const YOPTS={ticks:{color:'#aaa',font:{size:10},callback:v=>v.toFixed(1)},grid:{color:'rgba(180,180,180,.12)'},border:{display:false}};
 
-function getMetricLabel(){return state.metric==='cr'?'CR / 1k envíos':state.metric==='tickets'?'Tickets':'Envíos';}
+function getMetricLabel(){return state.metric==='cr'?'Ticket Rate / 1k envíos':state.metric==='tickets'?'Tickets':'Envíos';}
 
 // ── NAV ──
 function goTo(page, el) {
@@ -741,7 +741,7 @@ function renderResumen() {
     type:'bar',
     data:{labels:state.carriers,datasets:[{data:promData,backgroundColor:state.carriers.map(c=>CARRIER_COLORS[c]),borderRadius:6,borderWidth:0}]},
     options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:34}},
-      scales:{x:XOPTS,y:{...YOPTS,min:0,max:14,title:{display:true,text:'CR / 1k',color:'#aaa',font:{size:10}}}},
+      scales:{x:XOPTS,y:{...YOPTS,min:0,max:14,title:{display:true,text:'TR / 1k',color:'#aaa',font:{size:10}}}},
       plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>` ${ctx.parsed.y.toFixed(2)} prom.`}}},
       barPercentage:0.35,categoryPercentage:0.5},plugins:[promTopPlugin]
   });
@@ -771,12 +771,12 @@ function renderMonthCards(sortedMonths) {
     const card=document.createElement('div');
     card.style.cssText='background:#fff;border-radius:10px;border:1px solid #E8ECF4;padding:18px 20px;';
     card.innerHTML=`<div style="font-size:13px;font-weight:600;color:#1A1D2E;margin-bottom:2px;">
-        ${m.replace('*','')} 2026 — CR/1k por carrier${isPartial?'<span class="partial-badge">Parcial</span>':''}
+        ${m.replace('*','')} 2026 — TR/1k por carrier${isPartial?'<span class="partial-badge">Parcial</span>':''}
       </div>
       <div style="font-size:11px;color:#888;margin-bottom:14px;">tickets lifecycle / envíos × 1,000</div>
       <div style="position:relative;height:260px;"><canvas id="${cid}"></canvas></div>
       <table style="margin-top:14px;">
-        <thead><tr><th>Carrier</th><th>Tickets</th><th>Envíos</th><th>CR/1k</th></tr></thead>
+        <thead><tr><th>Carrier</th><th>Tickets</th><th>Envíos</th><th>TR/1k</th></tr></thead>
         <tbody>${sorted.map(c=>{const v=RAW[c].cr[midx];return `<tr>
           <td><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:${CARRIER_COLORS[c]};margin-right:5px;vertical-align:middle;"></span>${c}</td>
           <td>${RAW[c].tix[midx].toLocaleString()}</td><td>${RAW[c].env[midx].toLocaleString()}</td>
@@ -828,7 +828,7 @@ function renderTendencia() {
   const t=document.getElementById('tendTable');
   let thead='<thead><tr><th>Mes</th>';
   state.carriers.forEach(c=>thead+=`<th style="text-align:center;">${c}</th>`);
-  thead+='<th style="text-align:center;">Total CR/1k</th></tr></thead>';
+  thead+='<th style="text-align:center;">Total TR/1k</th></tr></thead>';
   let tbody='<tbody>';
   sortedMonths.forEach(m=>{
     const midx=ALL_MONTHS.indexOf(m);
@@ -864,10 +864,10 @@ function renderCarrier() {
     const cid=`carrierChart_${c}`;
     const card=document.createElement('div'); card.className='card'; card.style.marginBottom='0';
     card.innerHTML=`<div class="card-title" style="color:${col};">${c} — ${getMetricLabel()}</div>
-      <div class="card-sub">prom. CR/1k: <strong style="color:${col};">${avg.toFixed(2)}</strong></div>
+      <div class="card-sub">prom. TR/1k: <strong style="color:${col};">${avg.toFixed(2)}</strong></div>
       <div style="position:relative;height:220px;"><canvas id="${cid}"></canvas></div>
       <table style="margin-top:12px;">
-        <thead><tr><th>Mes</th><th>Tickets</th><th>Envíos</th><th>CR/1k</th></tr></thead>
+        <thead><tr><th>Mes</th><th>Tickets</th><th>Envíos</th><th>TR/1k</th></tr></thead>
         <tbody>${sortedMonths.map(m=>{const i=ALL_MONTHS.indexOf(m);const v=RAW[c].cr[i];return `<tr><td>${m}${m.includes('*')?'<span class="partial-badge">Parcial</span>':''}</td><td>${RAW[c].tix[i].toLocaleString()}</td><td>${RAW[c].env[i].toLocaleString()}</td><td><span class="cr ${crClass(v)}">${v.toFixed(2)}</span></td></tr>`;}).join('')}</tbody>
         <tfoot><tr><td>PROM.</td><td>${Math.round(sortedMonths.reduce((s,m)=>s+RAW[c].tix[ALL_MONTHS.indexOf(m)],0)/sortedMonths.length).toLocaleString()}</td><td>—</td><td><span style="background:${sevColor(avg)};color:#fff;padding:2px 7px;border-radius:7px;font-size:11px;font-weight:600;">${avg.toFixed(2)}</span></td></tr></tfoot>
       </table>`;
@@ -890,8 +890,8 @@ function renderTabla() {
   const t=document.getElementById('tablaDetalle');
   let thead='<thead><tr><th rowspan="2">Mes</th>';
   state.carriers.forEach(c=>{const bg=c==='99min'?'#3A1A30':c==='Estafeta'?'#0F3A28':'#0F2A3A';thead+=`<th colspan="3" style="text-align:center;background:${bg};">${c}</th>`;});
-  thead+='<th rowspan="2" style="text-align:center;">Total CR/1k</th></tr><tr>';
-  state.carriers.forEach(c=>{const bg=c==='99min'?'#3A1A30':c==='Estafeta'?'#0F3A28':'#0F2A3A';thead+=`<th style="background:${bg};font-size:10px;">Envíos</th><th style="background:${bg};font-size:10px;">Tix</th><th style="background:${bg};text-align:center;font-size:10px;">CR/1k</th>`;});
+  thead+='<th rowspan="2" style="text-align:center;">Total TR/1k</th></tr><tr>';
+  state.carriers.forEach(c=>{const bg=c==='99min'?'#3A1A30':c==='Estafeta'?'#0F3A28':'#0F2A3A';thead+=`<th style="background:${bg};font-size:10px;">Envíos</th><th style="background:${bg};font-size:10px;">Tix</th><th style="background:${bg};text-align:center;font-size:10px;">TR/1k</th>`;});
   thead+='</tr></thead>';
   let tbody='<tbody>';
   sortedMonths.forEach(m=>{
