@@ -102,7 +102,7 @@ tfoot td:not(:first-child){text-align:right;}
 <nav class="sidebar">
   <div class="sidebar-logo">
     <h2>Lifecycle TR/1k</h2>
-    <p id="sidebarPeriod">ene 2026 – 28 jul 2026</p>
+    <p id="sidebarPeriod">ene 2026 – 4 ago 2026</p>
   </div>
 
   <!-- Vista -->
@@ -114,6 +114,7 @@ tfoot td:not(:first-child){text-align:right;}
     <button class="view-btn" onclick="goTo('tabla',this)">📋 &nbsp;Tabla detalle</button>
     <button class="view-btn" onclick="goTo('quejas',this)">💬 &nbsp;¿De qué se quejan?</button>
     <button class="view-btn" onclick="goTo('delivery',this)">📦 &nbsp;Delivery Rate</button>
+    <button class="view-btn" onclick="goTo('semanal',this)">📅 &nbsp;Vista Semanal</button>
   </div>
 
   <!-- Carriers -->
@@ -161,7 +162,8 @@ tfoot td:not(:first-child){text-align:right;}
       <button class="month-btn active" onclick="toggleMonth('Abr 26',this)">Abr 26</button>
       <button class="month-btn active" onclick="toggleMonth('May 26',this)">May 26</button>
       <button class="month-btn active" onclick="toggleMonth('Jun 26',this)">Jun 26</button>
-      <button class="month-btn active" onclick="toggleMonth('Jul 26*',this)">Jul 26*</button>
+      <button class="month-btn active" onclick="toggleMonth('Jul 26',this)">Jul 26</button>
+      <button class="month-btn active" onclick="toggleMonth('Ago 26*',this)">Ago 26*</button>
     </div>
   </div>
 
@@ -203,8 +205,8 @@ tfoot td:not(:first-child){text-align:right;}
 <!-- ══ RESUMEN ══ -->
 <div id="resumen" class="page active">
   <div class="page-header">
-    <h1>Ticket Rate / 1k Envíos — Ene–Jul 2026</h1>
-    <p id="resumenSub">Tickets lifecycle / envíos × 1,000 · ene 2026 – 28 jul 2026 <span class="partial-badge">Jul parcial</span></p>
+    <h1>Ticket Rate / 1k Envíos — Ene–Ago 2026</h1>
+    <p id="resumenSub">Tickets lifecycle / envíos × 1,000 · ene 2026 – 4 ago 2026 <span class="partial-badge">Ago parcial</span></p>
   </div>
   <div class="kpi-grid" id="kpiGrid"></div>
   <div class="card">
@@ -226,7 +228,7 @@ tfoot td:not(:first-child){text-align:right;}
 <div id="tendencia" class="page">
   <div class="page-header">
     <h1>Tendencia TR / 1k</h1>
-    <p>Evolución mensual por carrier · selección activa <span class="partial-badge">Jul parcial</span></p>
+    <p>Evolución mensual por carrier · selección activa <span class="partial-badge">Ago parcial</span></p>
   </div>
   <div class="card">
     <div class="card-title">Línea de tendencia</div>
@@ -254,7 +256,7 @@ tfoot td:not(:first-child){text-align:right;}
 <div id="tabla" class="page">
   <div class="page-header">
     <h1>Tabla Detalle</h1>
-    <p>Tickets, envíos y TR/1k · selección activa <span class="partial-badge">Jul parcial</span></p>
+    <p>Tickets, envíos y TR/1k · selección activa <span class="partial-badge">Ago parcial</span></p>
   </div>
   <div class="card">
     <div class="card-title">Detalle mensual completo</div>
@@ -268,7 +270,7 @@ tfoot td:not(:first-child){text-align:right;}
 <div id="quejas" class="page">
   <div class="page-header">
     <h1>¿De qué se quejan?</h1>
-    <p>Clasificación de motivos · ene 2026 – 28 jul 2026 · todos los carriers</p>
+    <p>Clasificación de motivos · ene 2026 – 4 ago 2026 · todos los carriers</p>
   </div>
 
   <div class="info-box">⚠️ <strong>Nota:</strong> "Falsa entrega sin detalle" (81–91% del total) no captura texto libre en el formulario — solo dirección y CP. Los motivos específicos se identificaron de los comentarios escritos por el agente en el resto de tickets.</div>
@@ -295,7 +297,7 @@ tfoot td:not(:first-child){text-align:right;}
     <div class="grid2">
       <div class="card">
         <div class="card-title">Distribución por motivo — DHL</div>
-        <div class="card-sub">% del total de tickets · ene 2026 – 28 jul 2026</div>
+        <div class="card-sub">% del total de tickets · ene 2026 – 4 ago 2026</div>
         <div style="position:relative;height:300px;"><canvas id="chartQuejasDHL"></canvas></div>
       </div>
       <div class="card">
@@ -348,7 +350,7 @@ tfoot td:not(:first-child){text-align:right;}
     <div class="grid2">
       <div class="card">
         <div class="card-title">Distribución por motivo — Estafeta</div>
-        <div class="card-sub">% del total de tickets · ene 2026 – 28 jul 2026</div>
+        <div class="card-sub">% del total de tickets · ene 2026 – 4 ago 2026</div>
         <div style="position:relative;height:300px;"><canvas id="chartQuejasEstafeta"></canvas></div>
       </div>
       <div class="card">
@@ -405,7 +407,7 @@ tfoot td:not(:first-child){text-align:right;}
     <div class="grid2">
       <div class="card">
         <div class="card-title">Distribución por motivo — 99min</div>
-        <div class="card-sub">% del total de tickets · ene 2026 – 28 jul 2026</div>
+        <div class="card-sub">% del total de tickets · ene 2026 – 4 ago 2026</div>
         <div style="position:relative;height:300px;"><canvas id="chartQuejas99min"></canvas></div>
       </div>
       <div class="card">
@@ -450,7 +452,7 @@ tfoot td:not(:first-child){text-align:right;}
 <div id="delivery" class="page">
   <div class="page-header">
     <h1>Delivery Rate</h1>
-    <p>Entregados / Total envíos · ene 2026 – 28 jul 2026 · higher is better <span class="partial-badge">Jul parcial</span></p>
+    <p>Entregados / Total envíos · ene 2026 – 4 ago 2026 · higher is better <span class="partial-badge">Ago parcial</span></p>
   </div>
 
   <div class="kpi-grid" id="kpiDR">
@@ -495,16 +497,16 @@ tfoot td:not(:first-child){text-align:right;}
           <tr><td style="font-weight:500;">Abr 26</td><td>30,925</td><td style="text-align:center;"><span class="cr cr-g">87.26%</span></td><td>290,616</td><td style="text-align:center;"><span class="cr cr-g">91.69%</span></td><td>151,573</td><td style="text-align:center;"><span class="cr cr-g">91.90%</span></td></tr>
           <tr><td style="font-weight:500;">May 26</td><td>26,847</td><td style="text-align:center;"><span class="cr cr-o">85.32%</span></td><td>252,491</td><td style="text-align:center;"><span class="cr cr-g">92.17%</span></td><td>128,726</td><td style="text-align:center;"><span class="cr cr-g">92.50%</span></td></tr>
           <tr><td style="font-weight:500;">Jun 26</td><td>28,307</td><td style="text-align:center;"><span class="cr cr-o">85.98%</span></td><td>250,049</td><td style="text-align:center;"><span class="cr cr-g">92.21%</span></td><td>128,506</td><td style="text-align:center;"><span class="cr cr-g">91.63%</span></td></tr>
-          <tr><td style="font-weight:500;">Jul 26* <span class="partial-badge">Parcial</span></td><td>13,324</td><td style="text-align:center;"><span class="cr cr-r">72.86%</span></td><td>119,860</td><td style="text-align:center;"><span class="cr cr-r">74.37%</span></td><td>62,275</td><td style="text-align:center;"><span class="cr cr-r">76.05%</span></td></tr>
+          <tr><td style="font-weight:500;">Jul 26 <span class="partial-badge">Parcial</span></td><td>13,324</td><td style="text-align:center;"><span class="cr cr-r">72.86%</span></td><td>119,860</td><td style="text-align:center;"><span class="cr cr-r">74.37%</span></td><td>62,275</td><td style="text-align:center;"><span class="cr cr-r">76.05%</span></td></tr>
         </tbody>
         <tfoot>
-          <tr><td>PROM.</td><td>—</td><td style="text-align:center;"><span style="background:#E65100;color:#fff;padding:2px 7px;border-radius:7px;font-size:11px;font-weight:600;">83.88%</span></td>
-          <td>—</td><td style="text-align:center;"><span style="background:#2E7D32;color:#fff;padding:2px 7px;border-radius:7px;font-size:11px;font-weight:600;">88.99%</span></td>
-          <td>—</td><td style="text-align:center;"><span style="background:#2E7D32;color:#fff;padding:2px 7px;border-radius:7px;font-size:11px;font-weight:600;">90.28%</span></td></tr>
+          <tr><td>PROM.</td><td>—</td><td style="text-align:center;"><span style="background:#E65100;color:#fff;padding:2px 7px;border-radius:7px;font-size:11px;font-weight:600;">84.34%</span></td>
+          <td>—</td><td style="text-align:center;"><span style="background:#2E7D32;color:#fff;padding:2px 7px;border-radius:7px;font-size:11px;font-weight:600;">89.81%</span></td>
+          <td>—</td><td style="text-align:center;"><span style="background:#2E7D32;color:#fff;padding:2px 7px;border-radius:7px;font-size:11px;font-weight:600;">90.51%</span></td></tr>
         </tfoot>
       </table>
       </div>
-      <p class="footnote">* Jul 2026 parcial al 16 jul · Fuente: etl.mx__contract.frodo__deliveries · delivery__created_at (MX timezone)</p>
+      <p class="footnote">* Jul 2026 parcial al 16 jul · Fuente: etl.mx__contract.frodo__deliveries · delivery__created_at (MX timezone) · jul 2026 completo</p>
     </div>
   </div>
 
@@ -514,13 +516,13 @@ tfoot td:not(:first-child){text-align:right;}
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
       <div style="background:#FFF5F5;border-radius:8px;padding:14px;border-top:3px solid #60A5FA;">
         <div style="font-size:11px;font-weight:600;color:#60A5FA;">DHL</div>
-        <div style="font-size:22px;font-weight:700;color:#C62828;margin:4px 0;">72.86%</div>
-        <div style="font-size:11px;color:#888;">vs prom. 85.72% ene–jun · −12.86pp</div>
+        <div style="font-size:22px;font-weight:700;color:#C62828;margin:4px 0;">76.05%</div>
+        <div style="font-size:11px;color:#888;">vs prom. 85.72% ene–jun · −9.67pp</div>
       </div>
       <div style="background:#FFF5F5;border-radius:8px;padding:14px;border-top:3px solid #26C6A0;">
         <div style="font-size:11px;font-weight:600;color:#26C6A0;">Estafeta</div>
-        <div style="font-size:22px;font-weight:700;color:#C62828;margin:4px 0;">74.37%</div>
-        <div style="font-size:11px;color:#888;">vs prom. 91.09% ene–jun · −16.72pp</div>
+        <div style="font-size:22px;font-weight:700;color:#C62828;margin:4px 0;">80.15%</div>
+        <div style="font-size:11px;color:#888;">vs prom. 91.42% ene–jun · −11.27pp</div>
       </div>
       <div style="background:#FFF5F5;border-radius:8px;padding:14px;border-top:3px solid #E040A0;">
         <div style="font-size:11px;font-weight:600;color:#E040A0;">99min</div>
@@ -534,18 +536,90 @@ tfoot td:not(:first-child){text-align:right;}
   </div>
 </div>
 
+<!-- ══ SEMANAL ══ -->
+<div id="semanal" class="page">
+  <div class="page-header">
+    <h1>Vista Semanal</h1>
+    <p>Volumen de envíos y Ticket Rate / 1k · ene – 4 ago 2026 <span class="partial-badge">Ago parcial</span></p>
+  </div>
+
+  <!-- Controls row 1: view + range presets -->
+  <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:10px;">
+    <div style="display:flex;gap:6px;align-items:center;">
+      <span style="font-size:11px;color:#888;">Vista:</span>
+      <div class="toggle-row" style="margin-top:0;">
+        <button class="toggle-btn active" id="sw-both"  onclick="setSemView('both',this)">Ambos</button>
+        <button class="toggle-btn"        id="sw-vol"   onclick="setSemView('vol',this)">Volumen</button>
+        <button class="toggle-btn"        id="sw-tr"    onclick="setSemView('tr',this)">TR/1k</button>
+      </div>
+    </div>
+    <div style="display:flex;gap:6px;align-items:center;">
+      <span style="font-size:11px;color:#888;">Período rápido:</span>
+      <button class="month-btn" id="sr-4"  onclick="setSemRange(4,this)">4 sem</button>
+      <button class="month-btn" id="sr-8"  onclick="setSemRange(8,this)">8 sem</button>
+      <button class="month-btn" id="sr-13" onclick="setSemRange(13,this)">13 sem</button>
+      <button class="month-btn active" id="sr-0" onclick="setSemRange(0,this)">Todo</button>
+    </div>
+  </div>
+
+  <!-- Week picker -->
+  <div class="card" style="margin-bottom:14px;">
+    <div class="card-title">Selecciona semanas específicas</div>
+    <div class="card-sub">Activa o desactiva semanas individuales · haz clic en varias para comparar</div>
+    <div id="weekPicker" style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:10px;"></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <button onclick="selectAllWeeks()" style="padding:4px 12px;border-radius:6px;border:1px solid #ddd;background:#fff;cursor:pointer;font-size:11px;color:#555;">Seleccionar todas</button>
+      <button onclick="deselectAllWeeks()" style="padding:4px 12px;border-radius:6px;border:1px solid #ddd;background:#fff;cursor:pointer;font-size:11px;color:#555;">Deseleccionar todas</button>
+      <button onclick="selectLastN(4)" style="padding:4px 12px;border-radius:6px;border:1px solid #7B8EF7;background:#EEF2FF;cursor:pointer;font-size:11px;color:#4338CA;">Últimas 4</button>
+      <button onclick="selectLastN(8)" style="padding:4px 12px;border-radius:6px;border:1px solid #7B8EF7;background:#EEF2FF;cursor:pointer;font-size:11px;color:#4338CA;">Últimas 8</button>
+      <button onclick="selectLastN(13)" style="padding:4px 12px;border-radius:6px;border:1px solid #7B8EF7;background:#EEF2FF;cursor:pointer;font-size:11px;color:#4338CA;">Últimas 13</button>
+    </div>
+  </div>
+
+  <!-- KPI strip -->
+  <div class="kpi-grid" id="kpiSemanal"></div>
+
+  <!-- Volume chart -->
+  <div class="card" id="semVolCard">
+    <div class="card-title">Volumen de envíos — semanas seleccionadas</div>
+    <div class="card-sub">Total de envíos procesados por carrier</div>
+    <div style="position:relative;height:300px;"><canvas id="chartSemVol"></canvas></div>
+  </div>
+
+  <!-- TR/1k chart -->
+  <div class="card" id="semTRCard">
+    <div class="card-title">Ticket Rate / 1k envíos — semanas seleccionadas</div>
+    <div class="card-sub">Tickets lifecycle / envíos × 1,000 · puntos coloreados por severidad</div>
+    <div style="position:relative;height:300px;"><canvas id="chartSemTR"></canvas></div>
+    <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:10px;">
+      <div style="display:flex;align-items:center;gap:5px;font-size:10px;color:#888;"><div style="width:8px;height:8px;border-radius:2px;background:#2E7D32;"></div>&lt; 5</div>
+      <div style="display:flex;align-items:center;gap:5px;font-size:10px;color:#888;"><div style="width:8px;height:8px;border-radius:2px;background:#F9A825;"></div>5–7</div>
+      <div style="display:flex;align-items:center;gap:5px;font-size:10px;color:#888;"><div style="width:8px;height:8px;border-radius:2px;background:#E65100;"></div>7–10</div>
+      <div style="display:flex;align-items:center;gap:5px;font-size:10px;color:#888;"><div style="width:8px;height:8px;border-radius:2px;background:#C62828;"></div>&gt; 10</div>
+    </div>
+  </div>
+
+  <!-- Detail table -->
+  <div class="card" id="semTableCard">
+    <div class="card-title">Detalle por semana</div>
+    <div class="card-sub">Tickets, envíos y TR/1k por carrier · semanas seleccionadas</div>
+    <div style="overflow-x:auto;" id="semTable"></div>
+  </div>
+
+</div>
+
 </main>
 <script>
 // ══════════════════════════════════════════════════════
 // DATA
 // ══════════════════════════════════════════════════════
-const ALL_MONTHS = ['Ene 26','Feb 26','Mar 26','Abr 26','May 26','Jun 26','Jul 26*'];
+const ALL_MONTHS = ['Ene 26','Feb 26','Mar 26','Abr 26','May 26','Jun 26','Jul 26','Ago 26*'];
 const CARRIER_COLORS = { 'DHL':'#60A5FA', 'Estafeta':'#26C6A0', '99min':'#E040A0' };
 
 const RAW = {
-  'DHL':     { cr:[3.68,3.28,1.76,3.48,4.99,3.39,2.08], tix:[135,68,68,108,134,96,47],  env:[36670,20730,38715,31077,26847,28307,22638] },
-  'Estafeta':{ cr:[3.81,5.43,2.82,5.68,5.80,4.58,3.58], tix:[1363,1005,1097,1669,1464,1144,733], env:[357730,185203,389275,293600,252491,250049,204780] },
-  '99min':   { cr:[8.29,11.54,6.06,10.56,9.92,6.44,3.87], tix:[1533,1114,1200,1617,1277,828,412], env:[185030,96497,197870,153179,128726,128506,106557] },
+  'DHL':     { cr:[3.68,3.28,1.76,3.48,4.99,3.39,2.21,2.74], tix:[135,68,68,108,134,96,60,6],   env:[36670,20730,38715,31077,26847,28307,27148,2192] },
+  'Estafeta':{ cr:[3.81,5.43,2.82,5.68,5.80,4.58,3.41,3.20], tix:[1363,1005,1097,1669,1464,1144,843,63],  env:[357730,185203,389275,293600,252491,250049,247207,19664] },
+  '99min':   { cr:[8.29,11.54,6.06,10.56,9.92,6.44,3.74,5.64], tix:[1533,1114,1200,1617,1277,828,479,57], env:[185030,96497,197870,153179,128726,128506,128085,10112] },
 };
 
 let state = {
@@ -645,6 +719,7 @@ function renderPage(page) {
   if(page==='carrier')   renderCarrier();
   if(page==='tabla')     renderTabla();
   if(page==='delivery')  renderDelivery();
+  if(page==='semanal')   renderSemanalInit();
 }
 
 function renderResumen() {
@@ -653,7 +728,8 @@ function renderResumen() {
   const kpiGrid=document.getElementById('kpiGrid');
   kpiGrid.innerHTML='';
   state.carriers.forEach(c=>{
-    const crs=sortedMonths.map(m=>RAW[c].cr[ALL_MONTHS.indexOf(m)]);
+    const crs=sortedMonths.map(m=>RAW[c].cr[ALL_MONTHS.indexOf(m)]).filter(v=>v!=null&&!isNaN(v));
+    if(!crs.length) return;
     const avg=crs.reduce((a,b)=>a+b,0)/crs.length;
     const max=Math.max(...crs),maxM=sortedMonths[crs.indexOf(max)];
     const min=Math.min(...crs),minM=sortedMonths[crs.indexOf(min)];
@@ -859,7 +935,8 @@ function renderCarrier() {
   state.carriers.forEach(c=>{
     const col=CARRIER_COLORS[c];
     const vals=sortedMonths.map(m=>{const i=ALL_MONTHS.indexOf(m);return state.metric==='cr'?RAW[c].cr[i]:state.metric==='tickets'?RAW[c].tix[i]:RAW[c].env[i];});
-    const crs=sortedMonths.map(m=>RAW[c].cr[ALL_MONTHS.indexOf(m)]);
+    const crs=sortedMonths.map(m=>RAW[c].cr[ALL_MONTHS.indexOf(m)]).filter(v=>v!=null&&!isNaN(v));
+    if(!crs.length) return;
     const avg=crs.reduce((a,b)=>a+b,0)/crs.length;
     const cid=`carrierChart_${c}`;
     const card=document.createElement('div'); card.className='card'; card.style.marginBottom='0';
@@ -958,9 +1035,9 @@ function drBadge(v) {
 // ── DELIVERY RATE CHARTS ──
 function renderDelivery(){
   const DR = {
-    'DHL':     [83.97,87.68,84.09,87.26,85.32,85.98,72.86],
-    'Estafeta':[90.73,91.58,90.17,91.69,92.17,92.21,74.37],
-    '99min':   [93.46,94.37,92.05,91.90,92.50,91.63,76.05],
+    'DHL':     [83.97,87.68,84.09,87.26,85.32,85.98,76.05,null],
+    'Estafeta':[90.73,91.58,90.17,91.69,92.17,92.21,80.15,null],
+    '99min':   [93.46,94.37,92.05,91.90,92.50,91.63,77.67,null],
   };
   const sortedMonths = state.months.slice().sort((a,b)=>ALL_MONTHS.indexOf(a)-ALL_MONTHS.indexOf(b));
   const activeCarriers = state.carriers;
@@ -1043,14 +1120,14 @@ function renderDelivery(){
   charts['chartDRLine'] = new Chart(document.getElementById('chartDRLine'),{
     type:'line',
     data:{
-      labels:sortedMonths,
+      labels:drMonths,
       datasets:activeCarriers.map(c=>({
         label:displayName(c),
-        data:sortedMonths.map(m=>DR[c][ALL_MONTHS.indexOf(m)]),
+        data:drMonths.map(m=>DR[c][ALL_MONTHS.indexOf(m)]),
         borderColor:CARRIER_COLORS[c],
         backgroundColor:CARRIER_COLORS[c]+'15',
         borderWidth:2.5,pointRadius:5,
-        pointBackgroundColor:sortedMonths.map(m=>m.includes('*')?CARRIER_COLORS[c]+'80':CARRIER_COLORS[c]),
+        pointBackgroundColor:drMonths.map(m=>m.includes('*')?CARRIER_COLORS[c]+'80':CARRIER_COLORS[c]),
         tension:.3,fill:true
       }))
     },
@@ -1066,6 +1143,298 @@ function renderDelivery(){
 updateFiltersBar();
 renderResumen();
 setTimeout(()=>buildQuejasChart('DHL'),200);
+
+// ── VISTA SEMANAL ──
+const SEM_WEEKS = ['01-05','01-12','01-19','01-26','02-02','02-09','02-16','02-23','03-02','03-09','03-16','03-23','03-30','04-06','04-13','04-20','04-27','05-04','05-11','05-18','05-25','06-01','06-08','06-15','06-22','06-29','07-06','07-13','07-20','07-27','08-03'];
+const SEM_LABELS = ['05 ene','12 ene','19 ene','26 ene','02 feb','09 feb','16 feb','23 feb','02 mar','09 mar','16 mar','23 mar','30 mar','06 abr','13 abr','20 abr','27 abr','04 may','11 may','18 may','25 may','01 jun','08 jun','15 jun','22 jun','29 jun','06 jul','13 jul','20 jul','27 jul','03 ago*'];
+
+const SEM_DATA = {
+  'DHL':     {
+    env:[5560,4389,18217,6934,5629,2181,8551,4377,6075,2439,14299,12904,4614,9213,7151,7649,7138,6073,5326,7221,6537,6401,5979,7071,6955,6124,6464,6092,5709,3243,2192],
+    tix:[24,38,32,35,18,18,7,24,16,14,10,20,13,20,31,28,28,25,37,44,21,34,21,12,24,13,16,11,11,16,4],
+    tr: [4.32,8.66,1.76,5.05,3.20,8.25,0.82,5.48,2.63,5.74,0.70,1.55,2.82,2.17,4.34,3.66,3.92,4.12,6.95,6.09,3.21,5.31,3.51,1.70,3.45,2.12,2.48,1.81,1.93,4.94,1.82],
+  },
+  'Estafeta':{
+    env:[59317,43608,169003,68245,45841,22457,85895,31010,87220,19633,126632,125496,46020,91000,66795,66889,70227,58487,49677,68302,58988,55069,53356,59881,61334,59657,53893,57799,52074,30553,19664],
+    tix:[234,327,324,382,245,233,221,287,238,222,182,337,505,377,361,336,269,333,361,350,340,294,355,230,204,181,203,179,189,181,34],
+    tr: [3.94,7.50,1.92,5.60,5.34,10.38,2.57,9.26,2.73,11.31,1.44,2.69,10.97,4.14,5.40,5.02,3.83,5.69,7.27,5.12,5.76,5.34,6.65,3.84,3.33,3.03,3.77,3.10,3.63,5.92,1.73],
+  },
+  '99min':   {
+    env:[25960,24635,91945,35846,25438,11361,40739,18959,39523,13202,65561,64657,23408,46522,34592,36819,35511,30336,25179,34682,29783,29067,27292,31395,31606,27554,31072,29499,26854,15985,10112],
+    tix:[254,381,385,448,309,273,252,267,276,242,139,371,376,325,425,425,291,317,354,319,207,243,222,174,160,98,105,100,105,131,26],
+    tr: [9.78,15.47,4.19,12.50,12.15,24.03,6.19,14.08,6.98,18.33,2.12,5.74,16.06,6.99,12.29,11.54,8.19,10.45,14.06,9.20,6.95,8.36,8.13,5.54,5.06,3.56,3.38,3.39,3.91,8.20,2.57],
+  },
+};
+
+let semView = 'both';
+let semRange = 0;
+let selectedWeeks = new Set(SEM_WEEKS); // all selected by default
+
+function initWeekPicker() {
+  const picker = document.getElementById('weekPicker');
+  if(!picker) return;
+  picker.innerHTML = '';
+  SEM_WEEKS.forEach((w, i) => {
+    const label = SEM_LABELS[i];
+    const isPartial = i === SEM_WEEKS.length - 1;
+    const btn = document.createElement('button');
+    btn.id = 'wp-' + w;
+    btn.textContent = label;
+    btn.style.cssText = `padding:4px 10px;border-radius:6px;font-size:10px;font-weight:500;cursor:pointer;transition:all .12s;border:1px solid;white-space:nowrap;`;
+    const applyActive = (active) => {
+      if(active) {
+        btn.style.background = isPartial ? '#FFF3E0' : '#EEF2FF';
+        btn.style.color = isPartial ? '#E65100' : '#4338CA';
+        btn.style.borderColor = isPartial ? '#F4A020' : '#7B8EF7';
+      } else {
+        btn.style.background = '#F4F5F9';
+        btn.style.color = '#aaa';
+        btn.style.borderColor = '#E0E0E0';
+      }
+    };
+    applyActive(selectedWeeks.has(w));
+    btn.onclick = () => {
+      if(selectedWeeks.has(w)) selectedWeeks.delete(w);
+      else selectedWeeks.add(w);
+      applyActive(selectedWeeks.has(w));
+      semRange = 0;
+      document.querySelectorAll('[id^="sr-"]').forEach(b=>b.classList.remove('active'));
+      document.getElementById('sr-0').classList.add('active');
+      renderSemanal();
+    };
+    picker.appendChild(btn);
+  });
+}
+
+function selectAllWeeks() {
+  SEM_WEEKS.forEach(w => {
+    selectedWeeks.add(w);
+    const btn = document.getElementById('wp-'+w);
+    if(btn) { btn.style.background='#EEF2FF';btn.style.color='#4338CA';btn.style.borderColor='#7B8EF7'; }
+  });
+  renderSemanal();
+}
+
+function deselectAllWeeks() {
+  selectedWeeks.clear();
+  SEM_WEEKS.forEach(w => {
+    const btn = document.getElementById('wp-'+w);
+    if(btn) { btn.style.background='#F4F5F9';btn.style.color='#aaa';btn.style.borderColor='#E0E0E0'; }
+  });
+  renderSemanal();
+}
+
+function selectLastN(n) {
+  selectedWeeks.clear();
+  const toSelect = SEM_WEEKS.slice(-n);
+  toSelect.forEach(w => selectedWeeks.add(w));
+  SEM_WEEKS.forEach(w => {
+    const btn = document.getElementById('wp-'+w);
+    const active = selectedWeeks.has(w);
+    if(btn) {
+      const isP = w === SEM_WEEKS[SEM_WEEKS.length-1];
+      btn.style.background = active ? (isP?'#FFF3E0':'#EEF2FF') : '#F4F5F9';
+      btn.style.color = active ? (isP?'#E65100':'#4338CA') : '#aaa';
+      btn.style.borderColor = active ? (isP?'#F4A020':'#7B8EF7') : '#E0E0E0';
+    }
+  });
+  semRange = 0;
+  document.querySelectorAll('[id^="sr-"]').forEach(b=>b.classList.remove('active'));
+  document.getElementById('sr-0').classList.add('active');
+  renderSemanal();
+}
+
+function setSemView(mode, btn) {
+  semView = mode;
+  document.querySelectorAll('[id^="sw-"]').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderSemanal();
+}
+
+function setSemRange(n, btn) {
+  semRange = n;
+  document.querySelectorAll('[id^="sr-"]').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  // Update selectedWeeks to match range
+  const toSelect = n === 0 ? SEM_WEEKS : SEM_WEEKS.slice(-n);
+  selectedWeeks.clear();
+  toSelect.forEach(w => selectedWeeks.add(w));
+  // Update picker UI
+  SEM_WEEKS.forEach(w => {
+    const btn2 = document.getElementById('wp-'+w);
+    const active = selectedWeeks.has(w);
+    if(btn2) {
+      const isP = w === SEM_WEEKS[SEM_WEEKS.length-1];
+      btn2.style.background = active ? (isP?'#FFF3E0':'#EEF2FF') : '#F4F5F9';
+      btn2.style.color = active ? (isP?'#E65100':'#4338CA') : '#aaa';
+      btn2.style.borderColor = active ? (isP?'#F4A020':'#7B8EF7') : '#E0E0E0';
+    }
+  });
+  renderSemanal();
+}
+
+function renderSemanal() {
+  const carriers = state.carriers;
+  // Get selected week indices in order
+  const activeIdxs = SEM_WEEKS.map((w,i)=>({w,i})).filter(({w})=>selectedWeeks.has(w));
+  if(!activeIdxs.length) {
+    document.getElementById('kpiSemanal').innerHTML = '<div style="color:#aaa;font-size:12px;padding:10px;">Selecciona al menos una semana</div>';
+    return;
+  }
+  const weeks  = activeIdxs.map(({w})=>SEM_LABELS[SEM_WEEKS.indexOf(w)]);
+  const idxs   = activeIdxs.map(({i})=>i);
+  const isPartial = (pos) => idxs[pos] === SEM_WEEKS.length - 1;
+
+  // KPIs
+  const kpi = document.getElementById('kpiSemanal');
+  kpi.innerHTML = '';
+  carriers.forEach(c => {
+    const envS = idxs.map(i=>SEM_DATA[c].env[i]);
+    const tixS = idxs.map(i=>SEM_DATA[c].tix[i]);
+    const totEnv = envS.reduce((a,b)=>a+b,0);
+    const totTix = tixS.reduce((a,b)=>a+b,0);
+    const avgTR = totTix/totEnv*1000;
+    const peakTR = Math.max(...idxs.map(i=>SEM_DATA[c].tr[i]));
+    const col = CARRIER_COLORS[c];
+    kpi.innerHTML += `<div class="kpi"><div class="kpi-accent" style="background:${col};"></div>
+      <div class="kpi-val" style="color:${col};">${totEnv.toLocaleString()}</div>
+      <div class="kpi-lbl">${displayName(c)} · envíos</div>
+      <div class="kpi-note" style="color:#888;">${totTix.toLocaleString()} tickets · TR/1k: ${avgTR.toFixed(2)} · pico: ${peakTR.toFixed(2)}</div></div>`;
+  });
+  const totE = carriers.reduce((s,c)=>s+idxs.map(i=>SEM_DATA[c].env[i]).reduce((a,b)=>a+b,0),0);
+  const totT = carriers.reduce((s,c)=>s+idxs.map(i=>SEM_DATA[c].tix[i]).reduce((a,b)=>a+b,0),0);
+  kpi.innerHTML += `<div class="kpi"><div class="kpi-accent" style="background:#7B52B8;"></div>
+    <div class="kpi-val" style="color:#7B52B8;">${totE.toLocaleString()}</div>
+    <div class="kpi-lbl">Total · ${idxs.length} semanas</div>
+    <div class="kpi-note" style="color:#888;">${totT.toLocaleString()} tickets · TR/1k: ${(totT/totE*1000).toFixed(2)}</div></div>`;
+
+  // Show/hide
+  document.getElementById('semVolCard').style.display = semView==='tr'  ? 'none' : 'block';
+  document.getElementById('semTRCard').style.display  = semView==='vol' ? 'none' : 'block';
+  document.getElementById('semTableCard').style.display = 'block';
+
+  // Volume chart
+  if(semView !== 'tr') {
+    destroyChart('chartSemVol');
+    charts['chartSemVol'] = new Chart(document.getElementById('chartSemVol'), {
+      type:'bar',
+      data:{labels:weeks,datasets:carriers.map(c=>({
+        label:displayName(c),
+        data:idxs.map(i=>SEM_DATA[c].env[i]),
+        backgroundColor:idxs.map((gi,pos)=>isPartial(pos)?CARRIER_COLORS[c]+'50':CARRIER_COLORS[c]),
+        borderRadius:3,borderWidth:0,
+      }))},
+      options:{responsive:true,maintainAspectRatio:false,
+        scales:{
+          x:{ticks:{color:'#555',font:{size:9},maxRotation:45,minRotation:45},grid:{display:false},border:{display:false}},
+          y:{ticks:{color:'#aaa',font:{size:10},callback:v=>v>=1000?`${(v/1000).toFixed(0)}k`:v},grid:{color:'rgba(180,180,180,.12)'},border:{display:false}}
+        },
+        plugins:{legend:{position:'bottom',labels:{font:{size:11},boxWidth:8,padding:10}},
+          tooltip:{callbacks:{label:ctx=>` ${ctx.dataset.label}: ${ctx.parsed.y.toLocaleString()} envíos`}}}
+      }
+    });
+  }
+
+  // TR line chart
+  if(semView !== 'vol') {
+    destroyChart('chartSemTR');
+    charts['chartSemTR'] = new Chart(document.getElementById('chartSemTR'), {
+      type:'line',
+      data:{labels:weeks,datasets:carriers.map(c=>({
+        label:displayName(c),
+        data:idxs.map(i=>SEM_DATA[c].tr[i]),
+        borderColor:CARRIER_COLORS[c],
+        backgroundColor:CARRIER_COLORS[c]+'18',
+        borderWidth:2,
+        pointRadius:idxs.map((_,pos)=>isPartial(pos)?6:4),
+        pointBackgroundColor:idxs.map((gi,pos)=>isPartial(pos)?CARRIER_COLORS[c]+'60':sevColor(SEM_DATA[c].tr[gi])),
+        pointBorderColor:CARRIER_COLORS[c],pointBorderWidth:1.5,
+        tension:.35,fill:true,
+      }))},
+      options:{responsive:true,maintainAspectRatio:false,
+        interaction:{mode:'index',intersect:false},
+        scales:{
+          x:{ticks:{color:'#555',font:{size:9},maxRotation:45,minRotation:45},grid:{display:false},border:{display:false}},
+          y:{ticks:{color:'#aaa',font:{size:10},callback:v=>v.toFixed(1)},grid:{color:'rgba(180,180,180,.12)'},border:{display:false},
+             title:{display:true,text:'TR / 1k envíos',color:'#aaa',font:{size:10}}}
+        },
+        plugins:{legend:{position:'bottom',labels:{font:{size:11},boxWidth:8,padding:10}},
+          tooltip:{callbacks:{
+            label:ctx=>{
+              const c=carriers[ctx.datasetIndex]; const gi=idxs[ctx.dataIndex];
+              return [` ${displayName(c)}: ${ctx.parsed.y.toFixed(2)} TR/1k`,
+                      ` ${SEM_DATA[c].tix[gi]} tickets / ${SEM_DATA[c].env[gi].toLocaleString()} envíos`];
+            },
+            title:ctx=>`Semana ${weeks[ctx[0].dataIndex]}${isPartial(ctx[0].dataIndex)?' (parcial)':''}`,
+          }}
+        }
+      }
+    });
+  }
+
+  // Detail tables — one per metric, clean format like chat output
+  const container = document.getElementById('semTable');
+
+  // Build 3 clean tables: Tickets / Envíos / TR/1k
+  const buildTable = (title, sub, getValue, fmt, badge) => {
+    let h = `<div style="margin-bottom:20px;">
+      <div style="font-size:12px;font-weight:600;color:#1A1D2E;margin-bottom:2px;">${title}</div>
+      <div style="font-size:11px;color:#888;margin-bottom:8px;">${sub}</div>
+      <table>
+        <thead><tr><th>Semana</th>`;
+    carriers.forEach(c=>h+=`<th style="text-align:right;">${displayName(c)}</th>`);
+    h+=`<th style="text-align:right;">Total</th></tr></thead><tbody>`;
+    idxs.forEach((gi,pos)=>{
+      const wLabel=weeks[pos]; const partial=isPartial(pos);
+      const vals=carriers.map(c=>getValue(c,gi));
+      const total=vals.reduce((a,b)=>a+b,0);
+      h+=`<tr><td style="font-weight:500;">${wLabel}${partial?'<span class="partial-badge">Parcial</span>':''}</td>`;
+      vals.forEach((v,ci)=>{
+        const c=carriers[ci];
+        h+=`<td style="text-align:right;">${badge?`<span class="cr ${crClass(v)}">${fmt(v)}</span>`:fmt(v)}</td>`;
+      });
+      h+=`<td style="text-align:right;font-weight:600;">${badge?`<span class="cr ${crClass(total/carriers.reduce((s,c)=>s+SEM_DATA[c].env[gi],0)*1000)}">${fmt(total)}</span>`:fmt(total)}</td></tr>`;
+    });
+    // Footer totals
+    h+=`</tbody><tfoot><tr><td>TOTAL</td>`;
+    let grandTotal=0;
+    const grandEnv=carriers.reduce((s,c)=>s+idxs.reduce((ss,i)=>ss+SEM_DATA[c].env[i],0),0);
+    carriers.forEach(c=>{
+      const tot=idxs.reduce((s,i)=>s+getValue(c,i),0);
+      grandTotal+=tot;
+      if(badge){
+        const totTix=idxs.reduce((s,i)=>s+SEM_DATA[c].tix[i],0);
+        const totEnv=idxs.reduce((s,i)=>s+SEM_DATA[c].env[i],0);
+        const avgTR=totTix/totEnv*1000;
+        h+=`<td style="text-align:right;"><span style="background:${sevColor(avgTR)};color:#fff;padding:2px 7px;border-radius:7px;font-size:11px;font-weight:600;">${fmt(avgTR)}</span></td>`;
+      } else {
+        h+=`<td style="text-align:right;">${fmt(tot)}</td>`;
+      }
+    });
+    if(!badge) h+=`<td style="text-align:right;font-weight:600;">${fmt(grandTotal)}</td>`;
+    else {
+      const grandTix=carriers.reduce((s,c)=>s+idxs.reduce((ss,i)=>ss+SEM_DATA[c].tix[i],0),0);
+      const avgAll=grandTix/grandEnv*1000;
+      h+=`<td style="text-align:right;"><span style="background:${sevColor(avgAll)};color:#fff;padding:2px 7px;border-radius:7px;font-size:11px;font-weight:600;">${fmt(avgAll)}</span></td>`;
+    }
+    h+=`</tr></tfoot></table></div>`;
+    return h;
+  };
+
+  container.innerHTML =
+    buildTable('Tickets', 'Número de tickets lifecycle por semana y carrier',
+      (c,i)=>SEM_DATA[c].tix[i], v=>v.toLocaleString(), false) +
+    buildTable('Envíos', 'Total de envíos procesados por semana y carrier',
+      (c,i)=>SEM_DATA[c].env[i], v=>v.toLocaleString(), false) +
+    buildTable('Ticket Rate / 1k', 'Tickets / envíos × 1,000 · coloreado por severidad',
+      (c,i)=>SEM_DATA[c].tr[i], v=>v.toFixed(2), true);
+}
+
+function renderSemanalInit() {
+  selectedWeeks = new Set(SEM_WEEKS);
+  initWeekPicker();
+  renderSemanal();
+}
 </script>
 </body>
 </html>
