@@ -102,7 +102,7 @@ tfoot td:not(:first-child){text-align:right;}
 <nav class="sidebar">
   <div class="sidebar-logo">
     <h2>Lifecycle TR/1k</h2>
-    <p id="sidebarPeriod">ene 2026 – 4 ago 2026</p>
+    <p id="sidebarPeriod">ene 2026 – 6 ago 2026</p>
   </div>
 
   <!-- Vista -->
@@ -206,7 +206,7 @@ tfoot td:not(:first-child){text-align:right;}
 <div id="resumen" class="page active">
   <div class="page-header">
     <h1>Ticket Rate / 1k Envíos — Ene–Ago 2026</h1>
-    <p id="resumenSub">Tickets lifecycle / envíos × 1,000 · ene 2026 – 4 ago 2026 <span class="partial-badge">Ago parcial</span></p>
+    <p id="resumenSub">Tickets lifecycle / envíos × 1,000 · ene 2026 – 6 ago 2026 <span class="partial-badge">Ago parcial</span></p>
   </div>
   <div class="kpi-grid" id="kpiGrid"></div>
   <div class="card">
@@ -270,7 +270,7 @@ tfoot td:not(:first-child){text-align:right;}
 <div id="quejas" class="page">
   <div class="page-header">
     <h1>¿De qué se quejan?</h1>
-    <p>Clasificación de motivos · ene 2026 – 4 ago 2026 · todos los carriers</p>
+    <p>Clasificación de motivos · ene 2026 – 6 ago 2026 · todos los carriers</p>
   </div>
 
   <div class="info-box">⚠️ <strong>Nota:</strong> "Falsa entrega sin detalle" (81–91% del total) no captura texto libre en el formulario — solo dirección y CP. Los motivos específicos se identificaron de los comentarios escritos por el agente en el resto de tickets.</div>
@@ -297,7 +297,7 @@ tfoot td:not(:first-child){text-align:right;}
     <div class="grid2">
       <div class="card">
         <div class="card-title">Distribución por motivo — DHL</div>
-        <div class="card-sub">% del total de tickets · ene 2026 – 4 ago 2026</div>
+        <div class="card-sub">% del total de tickets · ene 2026 – 6 ago 2026</div>
         <div style="position:relative;height:300px;"><canvas id="chartQuejasDHL"></canvas></div>
       </div>
       <div class="card">
@@ -350,7 +350,7 @@ tfoot td:not(:first-child){text-align:right;}
     <div class="grid2">
       <div class="card">
         <div class="card-title">Distribución por motivo — Estafeta</div>
-        <div class="card-sub">% del total de tickets · ene 2026 – 4 ago 2026</div>
+        <div class="card-sub">% del total de tickets · ene 2026 – 6 ago 2026</div>
         <div style="position:relative;height:300px;"><canvas id="chartQuejasEstafeta"></canvas></div>
       </div>
       <div class="card">
@@ -407,7 +407,7 @@ tfoot td:not(:first-child){text-align:right;}
     <div class="grid2">
       <div class="card">
         <div class="card-title">Distribución por motivo — 99min</div>
-        <div class="card-sub">% del total de tickets · ene 2026 – 4 ago 2026</div>
+        <div class="card-sub">% del total de tickets · ene 2026 – 6 ago 2026</div>
         <div style="position:relative;height:300px;"><canvas id="chartQuejas99min"></canvas></div>
       </div>
       <div class="card">
@@ -452,7 +452,7 @@ tfoot td:not(:first-child){text-align:right;}
 <div id="delivery" class="page">
   <div class="page-header">
     <h1>Delivery Rate</h1>
-    <p>Entregados / Total envíos · ene 2026 – 4 ago 2026 · higher is better <span class="partial-badge">Ago parcial</span></p>
+    <p>Entregados / Total envíos · ene 2026 – 6 ago 2026 · higher is better <span class="partial-badge">Ago parcial</span></p>
   </div>
 
   <div class="kpi-grid" id="kpiDR">
@@ -540,7 +540,7 @@ tfoot td:not(:first-child){text-align:right;}
 <div id="semanal" class="page">
   <div class="page-header">
     <h1>Vista Semanal</h1>
-    <p>Volumen de envíos y Ticket Rate / 1k · ene – 4 ago 2026 <span class="partial-badge">Ago parcial</span></p>
+    <p>Volumen de envíos y Ticket Rate / 1k · ene – 6 ago 2026 <span class="partial-badge">Ago parcial</span></p>
   </div>
 
   <!-- Controls row 1: view + range presets -->
@@ -617,9 +617,9 @@ const ALL_MONTHS = ['Ene 26','Feb 26','Mar 26','Abr 26','May 26','Jun 26','Jul 2
 const CARRIER_COLORS = { 'DHL':'#60A5FA', 'Estafeta':'#26C6A0', '99min':'#E040A0' };
 
 const RAW = {
-  'DHL':     { cr:[3.68,3.28,1.76,3.48,4.99,3.39,2.21,2.74], tix:[135,68,68,108,134,96,60,6],   env:[36670,20730,38715,31077,26847,28307,27148,2192] },
-  'Estafeta':{ cr:[3.81,5.43,2.82,5.68,5.80,4.58,3.41,3.20], tix:[1363,1005,1097,1669,1464,1144,843,63],  env:[357730,185203,389275,293600,252491,250049,247207,19664] },
-  '99min':   { cr:[8.29,11.54,6.06,10.56,9.92,6.44,3.74,5.64], tix:[1533,1114,1200,1617,1277,828,479,57], env:[185030,96497,197870,153179,128726,128506,128085,10112] },
+  'DHL':     { cr:[3.68,3.28,1.76,3.48,4.99,3.39,2.21,3.24], tix:[135,68,68,108,134,96,60,15],  env:[36670,20730,38715,31077,26847,28307,27148,4625] },
+  'Estafeta':{ cr:[3.81,5.43,2.82,5.68,5.80,4.58,3.41,2.60], tix:[1363,1005,1097,1669,1464,1144,843,111], env:[357730,185203,389275,293600,252491,250049,247207,42709] },
+  '99min':   { cr:[8.29,11.54,6.06,10.56,9.92,6.44,3.74,4.55], tix:[1533,1114,1200,1617,1277,828,479,99], env:[185030,96497,197870,153179,128726,128506,128085,21767] },
 };
 
 let state = {
@@ -832,7 +832,7 @@ function renderMonthCards(sortedMonths) {
   container.innerHTML='';
   if(!sortedMonths.length||!state.carriers.length) return;
 
-  sortedMonths.forEach(m=>{
+  sortedMonths.filter(m=>DR[activeCarriers[0]][ALL_MONTHS.indexOf(m)]!=null).forEach(m=>{
     const midx=ALL_MONTHS.indexOf(m); const isPartial=m.includes('*');
     const sorted=state.carriers.slice().sort((a,b)=>RAW[a].cr[midx]-RAW[b].cr[midx]);
     const vals=sorted.map(c=>RAW[c].cr[midx]);
@@ -906,7 +906,7 @@ function renderTendencia() {
   state.carriers.forEach(c=>thead+=`<th style="text-align:center;">${c}</th>`);
   thead+='<th style="text-align:center;">Total TR/1k</th></tr></thead>';
   let tbody='<tbody>';
-  sortedMonths.forEach(m=>{
+  sortedMonths.filter(m=>DR[activeCarriers[0]][ALL_MONTHS.indexOf(m)]!=null).forEach(m=>{
     const midx=ALL_MONTHS.indexOf(m);
     const tt=state.carriers.reduce((s,c)=>s+RAW[c].tix[midx],0);
     const te=state.carriers.reduce((s,c)=>s+RAW[c].env[midx],0);
@@ -971,7 +971,7 @@ function renderTabla() {
   state.carriers.forEach(c=>{const bg=c==='99min'?'#3A1A30':c==='Estafeta'?'#0F3A28':'#0F2A3A';thead+=`<th style="background:${bg};font-size:10px;">Envíos</th><th style="background:${bg};font-size:10px;">Tix</th><th style="background:${bg};text-align:center;font-size:10px;">TR/1k</th>`;});
   thead+='</tr></thead>';
   let tbody='<tbody>';
-  sortedMonths.forEach(m=>{
+  sortedMonths.filter(m=>DR[activeCarriers[0]][ALL_MONTHS.indexOf(m)]!=null).forEach(m=>{
     const midx=ALL_MONTHS.indexOf(m);
     const tt=state.carriers.reduce((s,c)=>s+RAW[c].tix[midx],0);
     const te=state.carriers.reduce((s,c)=>s+RAW[c].env[midx],0);
@@ -1150,19 +1150,19 @@ const SEM_LABELS = ['05 ene','12 ene','19 ene','26 ene','02 feb','09 feb','16 fe
 
 const SEM_DATA = {
   'DHL':     {
-    env:[5560,4389,18217,6934,5629,2181,8551,4377,6075,2439,14299,12904,4614,9213,7151,7649,7138,6073,5326,7221,6537,6401,5979,7071,6955,6124,6464,6092,5709,3243,2192],
-    tix:[24,38,32,35,18,18,7,24,16,14,10,20,13,20,31,28,28,25,37,44,21,34,21,12,24,13,16,11,11,16,4],
-    tr: [4.32,8.66,1.76,5.05,3.20,8.25,0.82,5.48,2.63,5.74,0.70,1.55,2.82,2.17,4.34,3.66,3.92,4.12,6.95,6.09,3.21,5.31,3.51,1.70,3.45,2.12,2.48,1.81,1.93,4.94,1.82],
+    env:[5560,4389,18217,6934,5629,2181,8551,4377,6075,2439,14299,12904,4614,9213,7151,7649,7138,6073,5326,7221,6537,6401,5979,7071,6955,6124,6464,6092,5709,3243,4625],
+    tix:[24,38,32,35,18,18,7,24,16,14,10,20,13,20,31,28,28,25,37,44,21,34,21,12,24,13,16,11,11,16,13],
+    tr: [4.32,8.66,1.76,5.05,3.20,8.25,0.82,5.48,2.63,5.74,0.70,1.55,2.82,2.17,4.34,3.66,3.92,4.12,6.95,6.09,3.21,5.31,3.51,1.70,3.45,2.12,2.48,1.81,1.93,4.94,2.81],
   },
   'Estafeta':{
-    env:[59317,43608,169003,68245,45841,22457,85895,31010,87220,19633,126632,125496,46020,91000,66795,66889,70227,58487,49677,68302,58988,55069,53356,59881,61334,59657,53893,57799,52074,30553,19664],
-    tix:[234,327,324,382,245,233,221,287,238,222,182,337,505,377,361,336,269,333,361,350,340,294,355,230,204,181,203,179,189,181,34],
-    tr: [3.94,7.50,1.92,5.60,5.34,10.38,2.57,9.26,2.73,11.31,1.44,2.69,10.97,4.14,5.40,5.02,3.83,5.69,7.27,5.12,5.76,5.34,6.65,3.84,3.33,3.03,3.77,3.10,3.63,5.92,1.73],
+    env:[59317,43608,169003,68245,45841,22457,85895,31010,87220,19633,126632,125496,46020,91000,66795,66889,70227,58487,49677,68302,58988,55069,53356,59881,61334,59657,53893,57799,52074,30553,42709],
+    tix:[234,327,324,382,245,233,221,287,238,222,182,337,505,377,361,336,269,333,361,350,340,294,355,230,204,181,203,179,189,181,82],
+    tr: [3.94,7.50,1.92,5.60,5.34,10.38,2.57,9.26,2.73,11.31,1.44,2.69,10.97,4.14,5.40,5.02,3.83,5.69,7.27,5.12,5.76,5.34,6.65,3.84,3.33,3.03,3.77,3.10,3.63,5.92,1.92],
   },
   '99min':   {
-    env:[25960,24635,91945,35846,25438,11361,40739,18959,39523,13202,65561,64657,23408,46522,34592,36819,35511,30336,25179,34682,29783,29067,27292,31395,31606,27554,31072,29499,26854,15985,10112],
-    tix:[254,381,385,448,309,273,252,267,276,242,139,371,376,325,425,425,291,317,354,319,207,243,222,174,160,98,105,100,105,131,26],
-    tr: [9.78,15.47,4.19,12.50,12.15,24.03,6.19,14.08,6.98,18.33,2.12,5.74,16.06,6.99,12.29,11.54,8.19,10.45,14.06,9.20,6.95,8.36,8.13,5.54,5.06,3.56,3.38,3.39,3.91,8.20,2.57],
+    env:[25960,24635,91945,35846,25438,11361,40739,18959,39523,13202,65561,64657,23408,46522,34592,36819,35511,30336,25179,34682,29783,29067,27292,31395,31606,27554,31072,29499,26854,15985,21767],
+    tix:[254,381,385,448,309,273,252,267,276,242,139,371,376,325,425,425,291,317,354,319,207,243,222,174,160,98,105,100,105,131,68],
+    tr: [9.78,15.47,4.19,12.50,12.15,24.03,6.19,14.08,6.98,18.33,2.12,5.74,16.06,6.99,12.29,11.54,8.19,10.45,14.06,9.20,6.95,8.36,8.13,5.54,5.06,3.56,3.38,3.39,3.91,8.20,3.12],
   },
 };
 
