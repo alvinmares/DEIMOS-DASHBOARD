@@ -832,7 +832,7 @@ function renderMonthCards(sortedMonths) {
   container.innerHTML='';
   if(!sortedMonths.length||!state.carriers.length) return;
 
-  sortedMonths.filter(m=>DR[activeCarriers[0]][ALL_MONTHS.indexOf(m)]!=null).forEach(m=>{
+  sortedMonths.forEach(m=>{
     const midx=ALL_MONTHS.indexOf(m); const isPartial=m.includes('*');
     const sorted=state.carriers.slice().sort((a,b)=>RAW[a].cr[midx]-RAW[b].cr[midx]);
     const vals=sorted.map(c=>RAW[c].cr[midx]);
@@ -906,7 +906,7 @@ function renderTendencia() {
   state.carriers.forEach(c=>thead+=`<th style="text-align:center;">${c}</th>`);
   thead+='<th style="text-align:center;">Total TR/1k</th></tr></thead>';
   let tbody='<tbody>';
-  sortedMonths.filter(m=>DR[activeCarriers[0]][ALL_MONTHS.indexOf(m)]!=null).forEach(m=>{
+  sortedMonths.forEach(m=>{
     const midx=ALL_MONTHS.indexOf(m);
     const tt=state.carriers.reduce((s,c)=>s+RAW[c].tix[midx],0);
     const te=state.carriers.reduce((s,c)=>s+RAW[c].env[midx],0);
@@ -971,7 +971,7 @@ function renderTabla() {
   state.carriers.forEach(c=>{const bg=c==='99min'?'#3A1A30':c==='Estafeta'?'#0F3A28':'#0F2A3A';thead+=`<th style="background:${bg};font-size:10px;">Envíos</th><th style="background:${bg};font-size:10px;">Tix</th><th style="background:${bg};text-align:center;font-size:10px;">TR/1k</th>`;});
   thead+='</tr></thead>';
   let tbody='<tbody>';
-  sortedMonths.filter(m=>DR[activeCarriers[0]][ALL_MONTHS.indexOf(m)]!=null).forEach(m=>{
+  sortedMonths.forEach(m=>{
     const midx=ALL_MONTHS.indexOf(m);
     const tt=state.carriers.reduce((s,c)=>s+RAW[c].tix[midx],0);
     const te=state.carriers.reduce((s,c)=>s+RAW[c].env[midx],0);
@@ -1040,6 +1040,7 @@ function renderDelivery(){
     '99min':   [93.46,94.37,92.05,91.90,92.50,91.63,77.67,null],
   };
   const sortedMonths = state.months.slice().sort((a,b)=>ALL_MONTHS.indexOf(a)-ALL_MONTHS.indexOf(b));
+  const drMonths = sortedMonths.filter(m=>DR['DHL'][ALL_MONTHS.indexOf(m)]!=null);
   const activeCarriers = state.carriers;
   const XODR = {ticks:{color:'#555',font:{size:10},maxRotation:0},grid:{display:false},border:{display:false}};
   const YODR = {ticks:{color:'#aaa',font:{size:10},callback:v=>v.toFixed(2)+'%'},grid:{color:'rgba(180,180,180,.12)'},border:{display:false},min:60,max:100};
@@ -1049,88 +1050,76 @@ function renderDelivery(){
   if(kpiDR){
     kpiDR.innerHTML='';
     activeCarriers.forEach(c=>{
-      const rates = sortedMonths.map(m=>DR[c][ALL_MONTHS.indexOf(m)]);
-      const avg = rates.reduce((a,b)=>a+b,0)/rates.length;
-      const best = Math.max(...rates);
-      const bestM = sortedMonths[rates.indexOf(best)];
-      const col = CARRIER_COLORS[c];
-      kpiDR.innerHTML += `<div class="kpi"><div class="kpi-accent" style="background:${col};"></div>
+      const rates=drMonths.map(m=>DR[c][ALL_MONTHS.indexOf(m)]).filter(v=>v!=null);
+      if(!rates.length) return;
+      const avg=rates.reduce((a,b)=>a+b,0)/rates.length;
+      const best=Math.max(...rates);
+      const bestM=drMonths[rates.indexOf(best)];
+      const col=CARRIER_COLORS[c];
+      kpiDR.innerHTML+=`<div class="kpi"><div class="kpi-accent" style="background:${col};"></div>
         <div class="kpi-val" style="color:${col};">${avg.toFixed(2)}%</div>
         <div class="kpi-lbl">${displayName(c)} · prom. selección</div>
         <div class="kpi-note" style="color:#888;">mejor: ${best.toFixed(2)}% ${bestM}</div></div>`;
     });
-    // Total KPI
-    const allAvgs = activeCarriers.map(c=>{
-      const rates=sortedMonths.map(m=>DR[c][ALL_MONTHS.indexOf(m)]);
-      return rates.reduce((a,b)=>a+b,0)/rates.length;
+    const allAvgs=activeCarriers.map(c=>{
+      const r=drMonths.map(m=>DR[c][ALL_MONTHS.indexOf(m)]).filter(v=>v!=null);
+      return r.length?r.reduce((a,b)=>a+b,0)/r.length:0;
     });
-    const totalAvg = allAvgs.reduce((a,b)=>a+b,0)/allAvgs.length;
-    kpiDR.innerHTML += `<div class="kpi"><div class="kpi-accent" style="background:#7B52B8;"></div>
-      <div class="kpi-val" style="color:#7B52B8;">${totalAvg.toFixed(2)}%</div>
+    kpiDR.innerHTML+=`<div class="kpi"><div class="kpi-accent" style="background:#7B52B8;"></div>
+      <div class="kpi-val" style="color:#7B52B8;">${(allAvgs.reduce((a,b)=>a+b,0)/allAvgs.length).toFixed(2)}%</div>
       <div class="kpi-lbl">Total · prom. selección</div>
-      <div class="kpi-note" style="color:#888;">${sortedMonths.length} meses · ${activeCarriers.length} carriers</div></div>`;
+      <div class="kpi-note" style="color:#888;">${drMonths.length} meses · ${activeCarriers.length} carriers</div></div>`;
   }
 
-  // ── Grouped bar chart ──
-  const drTopPlugin = {
-    id:'drTop',
-    afterDatasetsDraw(chart){
-      const ctx=chart.ctx;
-      chart.data.datasets.forEach((ds,di)=>{
-        const meta=chart.getDatasetMeta(di); if(meta.hidden) return;
-        const c=activeCarriers[di];
-        meta.data.forEach((bar,mi)=>{
-          const midx=ALL_MONTHS.indexOf(sortedMonths[mi]);
-          const val=DR[c]?.[midx];
-          if(val==null) return;
-          const p=bar.getProps(['x','y','width'],true);
-          const barW=Math.abs(p.width||0); if(barW<16) return;
-          ctx.save(); ctx.textAlign='center';
-          ctx.fillStyle=CARRIER_COLORS[c];
-          ctx.font=`600 ${Math.min(11,Math.max(9,barW*.34))}px -apple-system,sans-serif`;
-          ctx.fillText(val.toFixed(2)+'%',p.x,p.y-6);
-          ctx.restore();
-        });
+  // ── Bar chart plugin ──
+  const drTopPlugin={id:'drTop',afterDatasetsDraw(chart){
+    const ctx=chart.ctx;
+    chart.data.datasets.forEach((ds,di)=>{
+      const meta=chart.getDatasetMeta(di); if(meta.hidden) return;
+      const c=activeCarriers[di];
+      meta.data.forEach((bar,mi)=>{
+        const val=DR[c]?.[ALL_MONTHS.indexOf(drMonths[mi])];
+        if(val==null) return;
+        const p=bar.getProps(['x','y','width'],true);
+        const barW=Math.abs(p.width||0); if(barW<16) return;
+        ctx.save(); ctx.textAlign='center';
+        ctx.fillStyle=CARRIER_COLORS[c];
+        ctx.font=`600 ${Math.min(11,Math.max(9,barW*.34))}px -apple-system,sans-serif`;
+        ctx.fillText(val.toFixed(2)+'%',p.x,p.y-6);
+        ctx.restore();
       });
-    }
-  };
+    });
+  }};
 
+  // ── Bar chart ──
   destroyChart('chartDR');
-  charts['chartDR'] = new Chart(document.getElementById('chartDR'),{
+  charts['chartDR']=new Chart(document.getElementById('chartDR'),{
     type:'bar',
-    data:{
-      labels:sortedMonths,
-      datasets:activeCarriers.map(c=>({
-        label:displayName(c),
-        data:sortedMonths.map(m=>DR[c][ALL_MONTHS.indexOf(m)]),
-        backgroundColor:sortedMonths.map(m=>m.includes('*')?CARRIER_COLORS[c]+'80':CARRIER_COLORS[c]),
-        borderRadius:4,borderWidth:0
-      }))
-    },
+    data:{labels:drMonths,datasets:activeCarriers.map(c=>({
+      label:displayName(c),
+      data:drMonths.map(m=>DR[c][ALL_MONTHS.indexOf(m)]),
+      backgroundColor:drMonths.map(m=>CARRIER_COLORS[c]),
+      borderRadius:4,borderWidth:0
+    }))},
     options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:22}},
       scales:{x:XODR,y:YODR},
       plugins:{legend:{position:'bottom',labels:{font:{size:11},boxWidth:8,padding:10}},
         tooltip:{callbacks:{label:ctx=>` ${ctx.dataset.label}: ${ctx.parsed.y.toFixed(2)}%`}}}
-    },
-    plugins:[drTopPlugin]
+    },plugins:[drTopPlugin]
   });
 
   // ── Line chart ──
   destroyChart('chartDRLine');
-  charts['chartDRLine'] = new Chart(document.getElementById('chartDRLine'),{
+  charts['chartDRLine']=new Chart(document.getElementById('chartDRLine'),{
     type:'line',
-    data:{
-      labels:drMonths,
-      datasets:activeCarriers.map(c=>({
-        label:displayName(c),
-        data:drMonths.map(m=>DR[c][ALL_MONTHS.indexOf(m)]),
-        borderColor:CARRIER_COLORS[c],
-        backgroundColor:CARRIER_COLORS[c]+'15',
-        borderWidth:2.5,pointRadius:5,
-        pointBackgroundColor:drMonths.map(m=>m.includes('*')?CARRIER_COLORS[c]+'80':CARRIER_COLORS[c]),
-        tension:.3,fill:true
-      }))
-    },
+    data:{labels:drMonths,datasets:activeCarriers.map(c=>({
+      label:displayName(c),
+      data:drMonths.map(m=>DR[c][ALL_MONTHS.indexOf(m)]),
+      borderColor:CARRIER_COLORS[c],backgroundColor:CARRIER_COLORS[c]+'15',
+      borderWidth:2.5,pointRadius:5,
+      pointBackgroundColor:drMonths.map(()=>CARRIER_COLORS[c]),
+      tension:.3,fill:true
+    }))},
     options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
       scales:{x:XODR,y:{...YODR,title:{display:true,text:'Delivery Rate %',color:'#aaa',font:{size:10}}}},
       plugins:{legend:{position:'bottom',labels:{font:{size:11},boxWidth:8,padding:10}},
@@ -1433,7 +1422,8 @@ function renderSemanal() {
 function renderSemanalInit() {
   selectedWeeks = new Set(SEM_WEEKS);
   initWeekPicker();
-  renderSemanal();
+  // Wait for page to be visible before rendering charts
+  setTimeout(renderSemanal, 150);
 }
 </script>
 </body>
