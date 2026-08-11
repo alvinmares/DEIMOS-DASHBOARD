@@ -609,7 +609,8 @@ tfoot td:not(:first-child){text-align:right;}
 </div>
 
 </main>
-<script src="data.js?v=20260810"></script>
+<!-- data.js siempre fresco: el timestamp evita que un index.html cacheado sirva datos viejos -->
+<script>document.write('<scr'+'ipt src="data.js?t='+Date.now()+'"><\/scr'+'ipt>');</script>
 <script>
 // ══════════════════════════════════════════════════════
 // DATA
