@@ -21,13 +21,15 @@ data.js      ← TODA la data. Este es el único archivo que editas cada ciclo. 
 README.md
 ```
 
-`index.html` carga `data.js` con cache-buster:
+`index.html` inyecta `data.js` con un timestamp en cada carga:
 
 ```html
-<script src="data.js?v=20260810"></script>
+<script>document.write('<scr'+'ipt src="data.js?t='+Date.now()+'"><\/scr'+'ipt>');</script>
 ```
 
-> **Sube el `?v=` cada vez que publiques.** GitHub Pages cachea agresivamente y sin esto el dash puede seguir mostrando datos viejos por varios minutos.
+> **No tienes que tocar nada de esto.** GitHub Pages manda `cache-control: max-age=600` en el HTML, así que un `index.html` cacheado podría servir datos de un ciclo anterior. El timestamp garantiza que `data.js` siempre se pida fresco, sin importar el caché del HTML.
+>
+> Si *tú* ves datos viejos justo después de publicar, es el caché de tu navegador con el HTML: un hard reload (`Cmd+Shift+R`) lo resuelve.
 
 ### Qué exporta `data.js`
 
@@ -166,7 +168,7 @@ TR/1k = (tickets / envíos) × 1,000     ← redondeado a 2 decimales
 
 ### Paso 6 — Editar `data.js` y publicar
 
-Actualiza los arrays, sube el `?v=` en `index.html` si cambiaste la versión, commit y push. GitHub Pages tarda ~1 min.
+Actualiza los arrays de `data.js` (incluyendo `DATA_META`), commit y push. GitHub Pages tarda ~1 min. `index.html` no se toca.
 
 ### Paso 7 — Verificar
 
