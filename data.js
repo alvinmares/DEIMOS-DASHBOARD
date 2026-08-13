@@ -1,27 +1,29 @@
 // ══════════════════════════════════════════════════════
 // DEIMOS DASHBOARD — CAPA DE DATOS
 // Único archivo que se edita en cada actualización.
-// Corte de datos: 9 ago 2026  ·  Publicado: 10 ago 2026
+// Corte de datos: 12 ago 2026  ·  Publicado: 13 ago 2026
 // Fuentes: tickets = Google Form lifecycle · envíos/DR = etl.mx__contract.frodo__deliveries
+// ⚠️ Frodo no tiene envíos creados el 2026-08-10 (lunes). El volumen aparece
+//    corrido a mar 11 / mié 12 (~26k c/u vs ~19k de un día hábil normal).
 // ══════════════════════════════════════════════════════
 
-const DATA_META = { corte: '2026-08-09', publicado: '2026-08-10', etiqueta: '9 ago 2026' };
+const DATA_META = { corte: '2026-08-12', publicado: '2026-08-13', etiqueta: '12 ago 2026' };
 
 // Mes con * = parcial (aún no cierra)
 const ALL_MONTHS = ['Ene 26','Feb 26','Mar 26','Abr 26','May 26','Jun 26','Jul 26','Ago 26*'];
 
 // cr = tix/env*1000 · tix = tickets del form · env = envíos de Frodo
 const RAW = {
-  'DHL':     { cr:[3.68,3.28,1.75,3.49,4.99,3.39,2.12,4.16], tix:[135,68,68,108,134,96,60,29], env:[36670,20738,38867,30925,26847,28307,28334,6963] },
-  'Estafeta':{ cr:[3.81,5.43,2.8,5.74,5.8,4.58,3.27,3.82], tix:[1363,1005,1097,1669,1464,1144,843,250], env:[357730,185203,392259,290616,252491,250049,257597,65452] },
-  '99min':   { cr:[8.29,11.54,6.02,10.67,9.92,6.44,3.59,5.82], tix:[1533,1114,1200,1617,1277,828,479,187], env:[185030,96497,199476,151573,128726,128506,133309,32141] },
+  'DHL':     { cr:[3.68,3.28,1.75,3.49,4.99,3.39,2.12,3.69], tix:[135,68,68,108,134,96,60,39], env:[36670,20738,38867,30925,26847,28307,28334,10565] },
+  'Estafeta':{ cr:[3.81,5.43,2.8,5.74,5.8,4.58,3.27,4.03], tix:[1363,1005,1097,1669,1464,1144,843,391], env:[357730,185203,392259,290616,252491,250049,257597,97000] },
+  '99min':   { cr:[8.29,11.54,6.02,10.67,9.92,6.44,3.59,5.92], tix:[1533,1114,1200,1617,1277,828,479,291], env:[185030,96497,199476,151573,128726,128506,133309,49181] },
 };
 
 // Delivery Rate % · null = mes aún inmaduro (los envíos recientes no han terminado su ciclo)
 const DR_DATA = {
-  'DHL':     [83.97,87.68,84.09,86.92,85.17,86,84.39,null],
-  'Estafeta':[90.73,91.58,90.17,91.45,92.06,92.22,91.35,null],
-  '99min':   [93.46,94.37,92.05,91.9,92.5,91.65,90.87,null],
+  'DHL':     [83.97,87.68,84.09,86.91,85.09,86,84.54,null],
+  'Estafeta':[90.73,91.58,90.17,91.45,92.01,92.22,91.6,null],
+  '99min':   [93.46,94.37,92.05,91.9,92.5,91.65,91.23,null],
 };
 
 // Semanas lunes–domingo (ISO)
