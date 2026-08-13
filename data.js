@@ -7,7 +7,23 @@
 //    corrido a mar 11 / mié 12 (~26k c/u vs ~19k de un día hábil normal).
 // ══════════════════════════════════════════════════════
 
-const DATA_META = { corte: '2026-08-12', publicado: '2026-08-13', etiqueta: '12 ago 2026' };
+// corte      = último día con datos de envíos (y de tickets: van alineados)
+// actualizado= cuándo corrió la actualización (ISO con offset CDMX)
+// ok         = la corrida terminó sin fallas de fuente ni de cálculo
+// mensaje    = una línea de resumen para el pie del sidebar
+// notas      = caveats del ciclo; salen en el tooltip del pie
+const DATA_META = {
+  corte: '2026-08-12',
+  publicado: '2026-08-13',
+  etiqueta: '12 ago 2026',
+  actualizado: '2026-08-13T12:38:00-06:00',
+  ok: true,
+  mensaje: 'Envíos e históricos sin drift · tickets alineados al corte',
+  notas: [
+    'Frodo no tiene envíos creados el lun 10 ago; el volumen aparece corrido a mar 11 / mié 12.',
+    'DR de agosto en null: la cohorte del mes aún no madura.',
+  ],
+};
 
 // Mes con * = parcial (aún no cierra)
 const ALL_MONTHS = ['Ene 26','Feb 26','Mar 26','Abr 26','May 26','Jun 26','Jul 26','Ago 26*'];
@@ -57,3 +73,133 @@ const QUEJAS_DATA={
   '99min':{labels:['Falsa entrega','Prob. repartidor','Entrega cruzada','Cambio carrier','Devolución sin intentos','Problema interno','No completó entrega','Punto forzado','Sobre abierto','No contestan','Otros'],
     data:[7079,294,166,84,58,38,18,16,14,13,26],colors:['#F06292','#7B52B8','#F4A020','#90A4AE','#60A5FA','#9E9E9E','#26C6A0','#FF8A65','#E040A0','#BDBDBD','#CFD8DC']}
 };
+
+// ══════════════════════════════════════════════════════
+// PIE DE ESTADO — capa de presentación
+//
+// Vive aquí y no en index.html porque data.js es el único archivo que la
+// actualización reescribe cada ciclo. Si algún día se mueve a index.html,
+// borra este bloque completo: no hay nada más que dependa de él.
+//
+// Hace dos cosas al cargar:
+//   1. Pinta un pie gris al fondo del sidebar con la fecha de actualización
+//      y si la corrida fue exitosa.
+//   2. Reescribe los 5 literales de rango de fechas de index.html desde
+//      DATA_META.etiqueta, para que no se queden atrás cada ciclo.
+// ══════════════════════════════════════════════════════
+(function () {
+  const MESES = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+
+  function fechaLarga(iso) {
+    const d = new Date(iso);
+    if (isNaN(d)) return String(iso || '—');
+    const hh = String(d.getHours()).padStart(2, '0');
+    const mm = String(d.getMinutes()).padStart(2, '0');
+    return `${d.getDate()} ${MESES[d.getMonth()]} ${d.getFullYear()}, ${hh}:${mm}`;
+  }
+
+  // Revisa que la data publicada sea internamente consistente.
+  function validar() {
+    const problemas = [];
+    const nM = (typeof ALL_MONTHS !== 'undefined' && ALL_MONTHS.length) || 0;
+    const nS = (typeof SEM_WEEKS !== 'undefined' && SEM_WEEKS.length) || 0;
+
+    if (!nM) problemas.push('ALL_MONTHS vacío');
+    if (!nS) problemas.push('SEM_WEEKS vacío');
+    if (typeof SEM_LABELS !== 'undefined' && SEM_LABELS.length !== nS) {
+      problemas.push('SEM_LABELS no cuadra con SEM_WEEKS');
+    }
+
+    ['DHL', 'Estafeta', '99min'].forEach(function (c) {
+      if (typeof RAW !== 'undefined' && RAW[c]) {
+        ['cr', 'tix', 'env'].forEach(function (k) {
+          if (RAW[c][k].length !== nM) problemas.push(`RAW.${c}.${k} ≠ ${nM} meses`);
+        });
+      }
+      if (typeof DR_DATA !== 'undefined' && DR_DATA[c] && DR_DATA[c].length !== nM) {
+        problemas.push(`DR_DATA.${c} ≠ ${nM} meses`);
+      }
+      if (typeof SEM_DATA !== 'undefined' && SEM_DATA[c]) {
+        ['env', 'tix', 'tr'].forEach(function (k) {
+          if (SEM_DATA[c][k].length !== nS) problemas.push(`SEM_DATA.${c}.${k} ≠ ${nS} semanas`);
+        });
+      }
+    });
+
+    return problemas;
+  }
+
+  // Los 5 nodos con el rango hardcodeado son markup estático de index.html:
+  // sobreviven los re-renders, así que basta un pase al cargar.
+  function refrescarFechas() {
+    const etiqueta = DATA_META.etiqueta;
+    if (!etiqueta) return;
+    const re = /(\d{1,2}\s+\w+\s+20\d{2})(?!.*\d{1,2}\s+\w+\s+20\d{2})/;
+    document.querySelectorAll('*').forEach(function (el) {
+      if (el.children.length !== 0) return;
+      const t = el.textContent;
+      if (t.indexOf('–') === -1 || !/20\d{2}/.test(t)) return;
+      const nuevo = t.replace(re, etiqueta);
+      if (nuevo !== t) el.textContent = nuevo;
+    });
+  }
+
+  function pintarPie() {
+    const sidebar = document.querySelector('nav.sidebar') || document.querySelector('.sidebar');
+    if (!sidebar || document.getElementById('sidebarStatus')) return;
+
+    const problemas = validar();
+    // Las gráficas las construye index.html; si no hay ninguna, algo truncó el render.
+    if (typeof charts !== 'undefined' && charts && Object.keys(charts).length === 0) {
+      problemas.push('ninguna gráfica se construyó');
+    }
+
+    const ok = DATA_META.ok !== false && problemas.length === 0;
+    const pie = document.createElement('div');
+    pie.id = 'sidebarStatus';
+    pie.style.cssText = [
+      'margin-top:auto',
+      'padding:14px 16px 12px',
+      'font-size:10.5px',
+      'line-height:1.5',
+      'color:#8A8F98',
+      'border-top:1px solid rgba(138,143,152,.18)',
+      'letter-spacing:.1px',
+    ].join(';');
+
+    const notas = (DATA_META.notas || []).slice();
+    if (problemas.length) notas.push('Validación: ' + problemas.join(' · '));
+    if (notas.length) pie.title = notas.join('\n');
+
+    const l1 = document.createElement('div');
+    l1.textContent = 'Actualizado ' + fechaLarga(DATA_META.actualizado);
+
+    const l2 = document.createElement('div');
+    l2.style.cssText = 'margin-top:2px;color:' + (ok ? '#8A8F98' : '#C77700') + ';font-weight:500';
+    l2.textContent = ok ? '✓ Actualización exitosa' : '⚠ Actualización con problemas';
+
+    pie.appendChild(l1);
+    pie.appendChild(l2);
+
+    if (!ok) {
+      const l3 = document.createElement('div');
+      l3.style.cssText = 'margin-top:3px;color:#8A8F98';
+      l3.textContent = problemas.length ? problemas[0] : (DATA_META.mensaje || '');
+      pie.appendChild(l3);
+    }
+
+    sidebar.appendChild(pie);
+  }
+
+  function init() {
+    try { refrescarFechas(); } catch (e) { /* cosmético, no tumbar el dash */ }
+    try { pintarPie(); } catch (e) { /* idem */ }
+  }
+
+  // index.html construye el dash al cargar; corremos después para no competir.
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function () { setTimeout(init, 0); });
+  } else {
+    setTimeout(init, 0);
+  }
+})();
