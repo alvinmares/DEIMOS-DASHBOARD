@@ -9,7 +9,7 @@ Trackea **Ticket Rate / 1k envíos** y **Delivery Rate** para DHL, Estafeta y 99
 | **Repo** | `alvinmares/DEIMOS-DASHBOARD` (público, GitHub Pages desde `main` / root) |
 | **Owner** | Alvin Mares — carriers operations Nu México |
 | **Autor original** | Carlos Torruco (transferido 10 ago 2026) |
-| **Último corte** | 9 ago 2026 |
+| **Último corte** | 12 ago 2026 |
 
 ---
 
@@ -17,7 +17,7 @@ Trackea **Ticket Rate / 1k envíos** y **Delivery Rate** para DHL, Estafeta y 99
 
 ```
 index.html   ← app: HTML + CSS + lógica de render. Casi nunca se toca.
-data.js      ← TODA la data. Este es el único archivo que editas cada ciclo. (~5 KB)
+data.js      ← TODA la data + el pie de estado. Único archivo que editas cada ciclo. (~11 KB)
 README.md
 ```
 
@@ -35,15 +35,17 @@ README.md
 
 | Constante | Contenido |
 |---|---|
-| `DATA_META` | Fecha de corte y de publicación (aparece en los headers) |
+| `DATA_META` | Corte, publicación, estado de la corrida y caveats (ver §2) |
 | `ALL_MONTHS` | Meses activos. `*` = mes parcial |
 | `RAW` | Por carrier: `cr` (TR/1k), `tix` (tickets), `env` (envíos) — mensual |
 | `DR_DATA` | Delivery Rate % mensual. `null` = mes aún inmaduro |
 | `SEM_WEEKS` / `SEM_LABELS` | Semanas lunes–domingo (ISO) |
 | `SEM_DATA` | `env` / `tix` / `tr` semanal por carrier |
-| `QUEJAS_DATA` | Dona de motivos de queja (ver §6 — pendiente) |
+| `QUEJAS_DATA` | Dona de motivos de queja (ver §7 — pendiente) |
 
 Todos los arrays de un mismo bloque deben tener **exactamente la misma longitud** que `ALL_MONTHS` (o `SEM_WEEKS`).
+
+Al final de `data.js` hay un bloque de **presentación** (el pie de estado, §6). Es lo único que no es data: está ahí y no en `index.html` porque `data.js` es el único archivo que la actualización reescribe. Si algún día se mueve a `index.html`, se borra ese bloque completo — nada más depende de él.
 
 ### Secciones del dash
 
@@ -59,7 +61,33 @@ Todos los arrays de un mismo bloque deben tener **exactamente la misma longitud*
 
 ---
 
-## 2. Fuentes de datos
+## 2. `DATA_META`
+
+```js
+const DATA_META = {
+  corte: '2026-08-12',                      // último día con datos (envíos y tickets, alineados)
+  publicado: '2026-08-13',
+  etiqueta: '12 ago 2026',                  // alimenta los rangos de fecha visibles
+  actualizado: '2026-08-13T12:38:00-06:00', // cuándo corrió la actualización
+  ok: true,                                 // ¿la corrida terminó sin fallas?
+  mensaje: 'Envíos e históricos sin drift · tickets alineados al corte',
+  notas: ['...'],                           // caveats del ciclo → tooltip del pie
+};
+```
+
+`etiqueta` es la que manda en los 5 nodos de `index.html` que muestran el rango de fechas
+(`#sidebarPeriod`, el subtítulo de la dona y 3 `.card-sub` de "% del total de tickets").
+Ese rango **estaba hardcodeado** y se quedaba atrás cada ciclo; ahora el bloque de
+presentación lo reescribe al cargar. Son nodos estáticos: sobreviven los re-renders,
+así que basta un pase.
+
+`ok` lo escribe la corrida. Ponlo en `false` si una fuente falló, si no pudiste alinear
+el corte de tickets con el de envíos, o si publicaste algo a medias — y explica qué pasó
+en `mensaje`, porque esa línea se muestra en el dashboard.
+
+---
+
+## 3. Fuentes de datos
 
 | Métrica | Fuente | Acceso |
 |---|---|---|
@@ -80,7 +108,7 @@ Todos los arrays de un mismo bloque deben tener **exactamente la misma longitud*
 
 ---
 
-## 3. Flujo de actualización
+## 4. Flujo de actualización
 
 ### Paso 1 — Determinar el corte
 
@@ -98,6 +126,8 @@ GROUP BY 1 ORDER BY 1
 El último día con volumen normal es tu corte. **Corta tickets y envíos en la misma fecha** — si no, el TR/1k sale inflado (los tickets están al día, los envíos no).
 
 > Los domingos tienen 0 envíos creados. Si tu corte cae en sábado, el domingo siguiente ya está "completo" y puedes cerrar la semana.
+>
+> Revisa también los días hábiles: si un lunes trae 0 envíos, no es normal. El 10 ago 2026 pasó exactamente eso y el volumen apareció corrido a los dos días siguientes (~26k vs ~19k de un día típico). Anótalo en `DATA_META.notas` y avisa al data owner.
 
 ### Paso 2 — Envíos y Delivery Rate (mensual)
 
@@ -119,7 +149,7 @@ WHERE CONVERT_TIMEZONE('UTC','America/Mexico_City', delivery__created_at) >= '20
 GROUP BY 1,2 ORDER BY 1,2
 ```
 
-Corre **todos los meses, no solo el actual**: la tabla se rellena hacia atrás y los meses viejos se mueven.
+Corre **todos los meses, no solo el actual**: la tabla se rellena hacia atrás y los meses viejos se mueven. Compara los envíos históricos contra lo ya publicado; si un mes se mueve más de 5%, hubo backfill y hay que reportarlo.
 
 ### Paso 3 — Envíos semanales
 
@@ -133,12 +163,14 @@ SELECT
   END AS carrier,
   COUNT(*) AS envios
 FROM etl.mx__contract.frodo__deliveries
-WHERE CONVERT_TIMEZONE('UTC','America/Mexico_City', delivery__created_at) >= '2026-07-01'
+WHERE CONVERT_TIMEZONE('UTC','America/Mexico_City', delivery__created_at) >= '2026-01-01'
   AND delivery__carrier IN ('delivery_carrier__dhl','delivery_carrier__estafeta','delivery_carrier__c99_minutos')
 GROUP BY 1,2 ORDER BY 1,2
 ```
 
 Nunca calcules los envíos semanales a mano a partir del mensual.
+
+> `DATE_TRUNC('week', …)` mete los primeros días de enero en la semana del 29-dic-2025. `SEM_WEEKS` arranca en `01-05` a propósito: esa semana parcial no se publica.
 
 ### Paso 4 — Tickets, sin descargar el xlsx
 
@@ -160,6 +192,8 @@ await tq(`select month(A), day(A), H, count(A)
 
 Desde el detalle diario armas mes y semana (lunes–domingo) y cortas donde quieras. Requiere `tqx=out:csv` — `out:json` pide OAuth y falla.
 
+> El CSV crudo son ~15 KB y no cabe de un jalón en la respuesta de la herramienta. Agrega en el mismo JS (arma los buckets de mes y semana ahí) y devuelve sólo los totales.
+
 ### Paso 5 — Calcular
 
 ```
@@ -168,31 +202,60 @@ TR/1k = (tickets / envíos) × 1,000     ← redondeado a 2 decimales
 
 ### Paso 6 — Editar `data.js` y publicar
 
-Actualiza los arrays de `data.js` (incluyendo `DATA_META`), commit y push. GitHub Pages tarda ~1 min. `index.html` no se toca.
+Actualiza los arrays, `DATA_META` (incluyendo `actualizado`, `ok`, `mensaje` y `notas`), commit y push. GitHub Pages tarda ~1 min. `index.html` no se toca.
 
 ### Paso 7 — Verificar
 
 Abre el dash con un query string nuevo (`?cb=loquesea`) para saltarte el caché y confirma en consola:
 
 ```js
-DATA_META                    // corte correcto
+DATA_META                              // corte correcto
 RAW.DHL.cr.length === ALL_MONTHS.length
-Object.keys(charts).length   // > 0, las gráficas se construyeron
+Object.keys(charts).length             // > 0, las gráficas se construyeron
+document.getElementById('sidebarStatus').innerText   // pie: fecha + estado
 ```
 
-Recorre las 7 secciones y revisa que no haya errores en consola.
+Recorre las 7 secciones y revisa la consola.
+
+> **Ruido conocido:** la página "Por carrier" tira ~8 excepciones de Chart.js
+> (`Canvas is already in use`) porque el loop de mini-gráficas corre dos veces al
+> cargar. Es cosmético — las 8 mini-gráficas quedan montadas y se ven bien. No es
+> señal de que tu actualización rompió algo. Arreglarlo requiere tocar `index.html`.
 
 ---
 
-## 4. Cierre de mes
+## 5. Cierre de mes
 
 1. Quita el `*` de `ALL_MONTHS` (`'Ago 26*'` → `'Ago 26'`) y del botón correspondiente en el sidebar de `index.html`.
-2. Espera ~2–3 semanas y **entonces** llena el DR del mes (ver §5).
+2. Espera ~2–3 semanas y **entonces** llena el DR del mes (ver §6).
 3. Agrega el nuevo mes parcial a `ALL_MONTHS`, un `null` al final de cada array de `DR_DATA`, y un botón nuevo en el sidebar.
 
 ---
 
-## 5. ⚠️ El Delivery Rate madura
+## 6. Pie de estado y autovalidación
+
+Al fondo del sidebar, en letras grises chicas:
+
+```
+Actualizado 13 ago 2026, 12:38
+✓ Actualización exitosa
+```
+
+Sale de `DATA_META.actualizado` y `DATA_META.ok`. Los `notas` van en el tooltip.
+
+Además, al cargar se **autovalida** la data: que todos los arrays de `RAW`, `DR_DATA` y
+`SEM_DATA` cuadren con `ALL_MONTHS` / `SEM_WEEKS`, que `SEM_LABELS` cuadre con
+`SEM_WEEKS`, y que se haya construido al menos una gráfica. Si algo no cuadra el pie
+pasa a **⚠ Actualización con problemas** y nombra el array culpable, aunque hayas
+puesto `ok: true`. Es la red que atrapa el error más fácil de cometer: agregar una
+semana o un mes y olvidar extender uno de los nueve arrays.
+
+Los dos estados están probados. Si ves el ⚠ después de publicar, el detalle está en la
+segunda línea y en el tooltip.
+
+---
+
+## 7. ⚠️ El Delivery Rate madura
 
 El DR se mide sobre la cohorte de envíos **creados** en el mes. Un envío creado el 30 de julio todavía no se ha entregado el 1 de agosto, así que cuenta como no-entregado.
 
@@ -200,16 +263,23 @@ Esto ya causó un error real: el dash publicaba julio 2026 en **76.05 / 80.15 / 
 
 **Regla:** deja el DR en `null` hasta que el mes tenga al menos ~3 semanas de cerrado. Un DR por debajo de ~70% en un mes reciente casi siempre es inmadurez, no un problema del carrier. Y cada ciclo, vuelve a correr el DR de los 2–3 meses previos: siguen subiendo.
 
+> Referencia de cuánto se mueve: al 12 ago, julio ya llevaba 13 días cerrado y subió a
+> **84.54 / 91.60 / 91.23** — arriba de lo que se publicó el ciclo anterior.
+
+**DHL vive en la banda 84–87%**, contra ~91 de Estafeta y ~92 de 99min. Cuando DHL sale abajo de 85 en un mes maduro no es un evento nuevo, es su comportamiento normal. Vale la pena tenerlo como conversación de fondo con el carrier, no como alerta de cada ciclo.
+
 ---
 
-## 6. Pendientes conocidos
+## 8. Pendientes conocidos
 
 - **Chart "¿De qué se quejan?"** — usa una taxonomía (*Sin cobertura*, *Múltiples intentos*, *Punto forzado*, *Sobre abierto*…) que ya no existe en el form actual. El form vigente solo tiene 5 categorías en la col. I y 3 en la col. O. Los números en `QUEJAS_DATA` vienen del ciclo de Carlos y **no son reproducibles**. Hay que redefinir el mapeo con la estructura actual del form y documentarlo.
-- **Ventana de la dona** — sin definir. Cuando se rehaga, fijarla explícitamente (ej. 2026 YTD).
+- **Ventana de la dona** — sin definir. Cuando se rehaga, fijarla explícitamente (ej. 2026 YTD). Mientras tanto sus 3 subtítulos muestran el rango del corte, que probablemente no es la ventana real de esos números.
+- **Doble render en "Por carrier"** — las excepciones cosméticas de Chart.js (§4, paso 7). Se arregla destruyendo la instancia previa antes de recrear cada mini-gráfica.
+- **El pie de estado vive en `data.js`** — su lugar natural es `index.html`. Está en `data.js` porque es el archivo que se reescribe cada ciclo y porque `index.html` (~86 KB) no se puede parchear por la API de GitHub sin retransmitirlo completo.
 
 ---
 
-## 7. Severidad TR/1k
+## 9. Severidad TR/1k
 
 | Color | Rango | CSS |
 |---|---|---|
@@ -222,4 +292,4 @@ Delivery Rate (higher is better): 🟢 ≥ 90 · 🟡 85–90 · 🟠 75–85 ·
 
 ---
 
-*Actualizado: 10 ago 2026 — datos al 9 ago 2026 (agosto parcial)*
+*Actualizado: 13 ago 2026 — datos al 12 ago 2026 (agosto parcial)*
