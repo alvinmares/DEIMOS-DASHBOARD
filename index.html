@@ -115,6 +115,7 @@ tfoot td:not(:first-child){text-align:right;}
     <button class="view-btn" onclick="goTo('quejas',this)">💬 &nbsp;¿De qué se quejan?</button>
     <button class="view-btn" onclick="goTo('delivery',this)">📦 &nbsp;Delivery Rate</button>
     <button class="view-btn" onclick="goTo('semanal',this)">📅 &nbsp;Vista Semanal</button>
+      <button class="view-btn" onclick="goTo('diaria',this)">🗓&nbsp; Vista Diaria</button>
   </div>
 
   <!-- Carriers -->
@@ -608,6 +609,41 @@ tfoot td:not(:first-child){text-align:right;}
 
 </div>
 
+    <div id="diaria" class="page">
+      <div class="page-header">
+        <h1>Vista Diaria</h1>
+        <p>Envíos y Ticket Rate / 1k por día · ene 2026 – 16 ago 2026 <span class="partial-badge">Ago parcial</span></p>
+      </div>
+
+      <div style="margin-bottom:14px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+        <span style="font-size:11px;color:#8896b0;">Rango:</span>
+        <button id="dr-30" class="month-btn" onclick="setDiaRange(30,this)">30 días</button>
+        <button id="dr-60" class="month-btn active" onclick="setDiaRange(60,this)">60 días</button>
+        <button id="dr-90" class="month-btn" onclick="setDiaRange(90,this)">90 días</button>
+        <button id="dr-0" class="month-btn" onclick="setDiaRange(0,this)">Todo el año</button>
+      </div>
+
+      <div class="kpi-grid" id="kpiDiaria"></div>
+
+      <div class="card">
+        <div class="card-title">Envíos por día</div>
+        <div class="card-sub">Envíos creados por carrier · los domingos no se crean envíos</div>
+        <div style="position:relative;height:300px;"><canvas id="dChartEnv"></canvas></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Ticket Rate / 1k por día</div>
+        <div class="card-sub" id="dChartTRsub">Línea tenue = día suelto (hueco si no hubo envíos) · línea sólida = media móvil de 7 días</div>
+        <div style="position:relative;height:300px;"><canvas id="dChartTR"></canvas></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Días hábiles sin envíos</div>
+        <div class="card-sub">Días de lunes a sábado con cero envíos creados en los tres carriers</div>
+        <div id="diaAlertas" style="margin-top:10px;"></div>
+      </div>
+    </div>
+
 </main>
 <!-- data.js siempre fresco: el timestamp evita que un index.html cacheado sirva datos viejos -->
 <script>document.write('<scr'+'ipt src="data.js?t='+Date.now()+'"><\/scr'+'ipt>');</script>
@@ -717,6 +753,7 @@ function renderPage(page) {
   if(page==='tabla')     renderTabla();
   if(page==='delivery')  renderDelivery();
   if(page==='semanal')   renderSemanalInit();
+      if (page === 'diaria') renderDiariaInit();
 }
 
 function renderResumen() {
@@ -1423,6 +1460,154 @@ function renderSemanalInit() {
   // Wait for page to be visible before rendering charts
   setTimeout(renderSemanal, 150);
 }
+    // ── VISTA DIARIA ───────────────────────────────────────────────────
+    // Serie diaria de DIA_DAYS / DIA_DATA (ver data.js). El TR/1k diario no
+    // se guarda: se calcula aquí y queda null los días con 0 envíos, para no
+    // dividir entre cero ni fingir un 0.
+    var diaRange = 60;
+    var DIA_MES = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+
+    function diaDate(k) { var p = DIA_DAYS[k].split('-'); return new Date(2026, +p[0] - 1, +p[1]); }
+    function diaLabel(k) { var p = DIA_DAYS[k].split('-'); return p[1] + ' ' + DIA_MES[+p[0] - 1]; }
+
+    function diaIdxs() {
+      var n = DIA_DAYS.length;
+      var m = (diaRange > 0) ? Math.min(diaRange, n) : n;
+      var out = []; for (var k = n - m; k < n; k++) out.push(k); return out;
+    }
+
+    function diaTR(c, k) {
+      var e = DIA_DATA[c].env[k];
+      return e > 0 ? +(DIA_DATA[c].tix[k] / e * 1000).toFixed(2) : null;
+    }
+
+    // Media móvil de 7 días como razón de sumas, no promedio de razones.
+    function diaTR7(c, k) {
+      var te = 0, tt = 0;
+      for (var i = Math.max(0, k - 6); i <= k; i++) { te += DIA_DATA[c].env[i]; tt += DIA_DATA[c].tix[i]; }
+      return te > 0 ? +(tt / te * 1000).toFixed(2) : null;
+    }
+
+    function diaEsHabilEnCero(k) {
+      if (diaDate(k).getDay() === 0) return false;
+      return DIA_DATA['DHL'].env[k] + DIA_DATA['Estafeta'].env[k] + DIA_DATA['99min'].env[k] === 0;
+    }
+
+    function setDiaRange(n, btn) {
+      diaRange = n;
+      document.querySelectorAll('[id^=dr-]').forEach(function (b) { b.classList.remove('active'); });
+      if (btn) btn.classList.add('active');
+      renderDiaria();
+    }
+
+    // Sombrea el tramo previo a DIA_LOTE (cargas por lote, granularidad no fiable).
+    var diaLotePlugin = {
+      id: 'diaLote',
+      beforeDatasetsDraw: function (chart) {
+        var idxs = chart.$diaIdxs || [], corte = -1;
+        for (var i = 0; i < idxs.length; i++) { if (DIA_DAYS[idxs[i]] >= DIA_LOTE) { corte = i; break; } }
+        if (corte <= 0) return;
+        var x = chart.scales.x, a = chart.chartArea, ctx = chart.ctx;
+        ctx.save();
+        ctx.fillStyle = 'rgba(120,130,150,.09)';
+        ctx.fillRect(a.left, a.top, x.getPixelForValue(corte) - a.left, a.bottom - a.top);
+        ctx.fillStyle = '#8896b0'; ctx.font = '10px -apple-system,sans-serif';
+        ctx.fillText('carga por lote · granularidad diaria no confiable', a.left + 8, a.top + 13);
+        ctx.restore();
+      }
+    };
+
+    function renderDiaria() {
+      var idxs = diaIdxs();
+      var labels = idxs.map(diaLabel);
+      var cs = state.carriers;
+
+      var kpi = document.getElementById('kpiDiaria');
+      kpi.innerHTML = cs.map(function (c) {
+        var env = 0, tix = 0;
+        idxs.forEach(function (k) { env += DIA_DATA[c].env[k]; tix += DIA_DATA[c].tix[k]; });
+        var tr = env > 0 ? (tix / env * 1000) : 0;
+        var ceros = idxs.filter(function (k) { return diaDate(k).getDay() !== 0 && DIA_DATA[c].env[k] === 0; }).length;
+        return '<div class="card" style="border-top:3px solid ' + CARRIER_COLORS[c] + '">' +
+          '<div style="font-size:26px;font-weight:600;color:' + CARRIER_COLORS[c] + '">' + tr.toFixed(2) + '</div>' +
+          '<div style="font-size:12px;color:#555;margin-top:2px">' + displayName(c) + ' · TR/1k del rango</div>' +
+          '<div style="font-size:11px;color:#8896b0;margin-top:4px">' + env.toLocaleString() + ' envíos · ' + tix.toLocaleString() + ' tickets · ' + ceros + ' días hábiles en 0</div>' +
+          '</div>';
+      }).join('');
+
+      if (charts.dChartEnv) charts.dChartEnv.destroy();
+      charts.dChartEnv = new Chart(document.getElementById('dChartEnv'), {
+        type: 'line',
+        data: { labels: labels, datasets: cs.map(function (c) { return {
+          label: displayName(c), data: idxs.map(function (k) { return DIA_DATA[c].env[k]; }),
+          borderColor: CARRIER_COLORS[c], backgroundColor: CARRIER_COLORS[c],
+          borderWidth: 1.6, pointRadius: idxs.length > 70 ? 0 : 2, tension: .25 }; }) },
+        options: { responsive: true, maintainAspectRatio: false,
+          interaction: { mode: 'index', intersect: false },
+          plugins: { legend: { position: 'bottom' } },
+          scales: { y: { beginAtZero: true, title: { display: true, text: 'Envíos creados' } },
+                    x: { ticks: { maxTicksLimit: 16, autoSkip: true } } } },
+        plugins: [diaLotePlugin]
+      });
+      charts.dChartEnv.$diaIdxs = idxs; charts.dChartEnv.update();
+
+      var ds = [];
+      cs.forEach(function (c) {
+        ds.push({ label: displayName(c) + ' (día)', data: idxs.map(function (k) { return diaTR(c, k); }),
+          borderColor: CARRIER_COLORS[c], backgroundColor: CARRIER_COLORS[c], borderWidth: 1,
+          borderDash: [3, 3], pointRadius: 0, spanGaps: false, tension: .2 });
+        ds.push({ label: displayName(c) + ' (7d)', data: idxs.map(function (k) { return diaTR7(c, k); }),
+          borderColor: CARRIER_COLORS[c], backgroundColor: CARRIER_COLORS[c], borderWidth: 2.4,
+          pointRadius: 0, spanGaps: false, tension: .3 });
+      });
+
+      // La escala se fija con el periodo confiable: si no, un pico de ene–abr
+      // (TR de 250 con los envíos casi en 0) aplasta mayo–agosto.
+      var conf = [];
+      idxs.forEach(function (k) {
+        if (DIA_DAYS[k] < DIA_LOTE) return;
+        cs.forEach(function (c) {
+          var a = diaTR(c, k), b = diaTR7(c, k);
+          if (a != null) conf.push(a);
+          if (b != null) conf.push(b);
+        });
+      });
+      var tope = conf.length ? Math.ceil(Math.max.apply(null, conf) * 1.5) : undefined;
+      var recortados = 0;
+      if (tope) ds.forEach(function (s) { s.data.forEach(function (v) { if (v != null && v > tope) recortados++; }); });
+      var subTR = document.getElementById('dChartTRsub');
+      if (subTR) subTR.textContent = 'Línea tenue = día suelto (hueco si no hubo envíos) · línea sólida = media móvil de 7 días' +
+        (recortados ? ' · ' + recortados + ' punto(s) de ene–abr quedan fuera de escala' : '');
+
+      if (charts.dChartTR) charts.dChartTR.destroy();
+      charts.dChartTR = new Chart(document.getElementById('dChartTR'), {
+        type: 'line', data: { labels: labels, datasets: ds },
+        options: { responsive: true, maintainAspectRatio: false,
+          interaction: { mode: 'index', intersect: false },
+          plugins: { legend: { position: 'bottom', labels: { filter: function (i) { return i.text.indexOf('(7d)') !== -1; } } } },
+          scales: { y: { beginAtZero: true, max: tope, title: { display: true, text: 'TR / 1k envíos' } },
+                    x: { ticks: { maxTicksLimit: 16, autoSkip: true } } } },
+        plugins: [diaLotePlugin]
+      });
+      charts.dChartTR.$diaIdxs = idxs; charts.dChartTR.update();
+
+      var ceros = idxs.filter(diaEsHabilEnCero);
+      var DOW = ['dom','lun','mar','mié','jue','vie','sáb'];
+      var box = document.getElementById('diaAlertas');
+      if (!ceros.length) {
+        box.innerHTML = '<div style="font-size:12px;color:#26C6A0">Ninguno en el rango seleccionado.</div>';
+      } else {
+        box.innerHTML = '<div style="display:flex;flex-wrap:wrap;gap:6px">' + ceros.map(function (k) {
+          var lote = DIA_DAYS[k] < DIA_LOTE;
+          return '<span style="padding:3px 9px;font-size:11.5px;border-radius:5px;background:' + (lote ? '#F4F5F9' : '#FFF3E0') + ';color:' + (lote ? '#8896b0' : '#E65100') + '">' +
+            DOW[diaDate(k).getDay()] + ' ' + diaLabel(k) + (lote ? ' · lote' : '') + '</span>';
+        }).join('') + '</div>' +
+        '<div style="font-size:11px;color:#8896b0;margin-top:9px">Los marcados como <strong>lote</strong> caen en ene–abr, cuando los envíos se cargaban por lotes: ahí un día en 0 es esperable. Los naranjas son de mayo en adelante, donde el baseline es limpio y sí ameritan revisión.</div>';
+      }
+    }
+
+    function renderDiariaInit() { renderDiaria(); }
+
 </script>
 </body>
 </html>
