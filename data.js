@@ -1,17 +1,21 @@
 // ══════════════════════════════════════════════════════
 // DEIMOS DASHBOARD — CAPA DE DATOS
 // Único archivo que se edita en cada actualización.
-// Corte de datos: 12 ago 2026  ·  Publicado: 17 ago 2026
+// Corte de datos: 16 ago 2026  ·  Publicado: 17 ago 2026
 // Fuentes: tickets = Google Form lifecycle · envíos/DR = etl.mx__contract.frodo__deliveries
 //
-// ⚠️ Frodo trae huecos en agosto y por eso el corte NO avanzó del 12:
-//      10 ago (lun) — 0 envíos creados
-//      13 ago (jue) — 3,745 contra ~14.6k esperados (parcial)
-//      14 ago (vie) — 0 envíos creados
-//      15 ago (sáb) — 21,616 contra ~10.7k de un sábado normal (inflado)
-//    Los tres carriers caen en la misma proporción, así que es ingesta y no
-//    operación. Los tickets del form sí están al día: publicar con este corte
-//    inflaría el TR/1k. Tampoco se cierra la semana 08-10: le faltan 2 días.
+// ⚠️ Interrupción operativa 10–14 ago (NO es problema de datos).
+//    El 10 y el 14 ago no se entregó ni una tarjeta al carrier, y el 13 salió
+//    a ~26% de lo normal. Confirmado con tres fuentes independientes:
+//      frodo delivery__created_at             0 / 3,745 / 0
+//      logistics_information ready_to_carrier 262 / 4,739 / 1
+//      balrog__response_files                 92 archivos el 10 y el 14
+//                                             (perfil de domingo) vs ~190–254
+//    La creación de paquetes siguió normal (~19.9k el 10, ~18.6k el 14): las
+//    tarjetas sí se produjeron; lo que se detuvo fue el paso al carrier. Se
+//    recuperó el 11, 12 y 15, que salen inflados por el catch-up.
+//    Efecto en la métrica: la semana 08-10 trae envíos ~16% abajo y tickets
+//    arriba, así que su TR/1k salta. Es real, no un artefacto del corte.
 // ══════════════════════════════════════════════════════
 
 // corte      = último día con datos de envíos (y de tickets: van alineados)
@@ -20,17 +24,17 @@
 // mensaje    = una línea de resumen para el pie del sidebar
 // notas      = caveats del ciclo; salen en el tooltip del pie
 const DATA_META = {
-  corte: '2026-08-12',
+  corte: '2026-08-16',
   publicado: '2026-08-17',
-  etiqueta: '12 ago 2026',
-  actualizado: '2026-08-17T10:19:00-06:00',
-  ok: false,
-  mensaje: 'Corte sin avanzar: Frodo no tiene el 10 ni el 14 ago',
+  etiqueta: '16 ago 2026',
+  actualizado: '2026-08-17T10:45:00-06:00',
+  ok: true,
+  mensaje: 'Corte al 16 ago · semana 08-10 cerrada',
   notas: [
-    'Frodo: 10 y 14 ago sin envíos creados; 13 ago parcial (3,745 vs ~14.6k); 15 ago inflado para ser sábado.',
-    'Los huecos pegan a los tres carriers en la misma proporción → ingesta, no operación.',
-    'Semana 08-10 sin cerrar: le faltan dos días de envíos.',
-    'DR de agosto en null: la cohorte del mes aún no madura (va en 80.65 / 84.81 / 82.02).',
+    'Interrupción operativa 10–14 ago: el 10 y el 14 no hubo entrega al carrier y el 13 salió a ~26%. Confirmado con Frodo, logistics_information y balrog__response_files.',
+    'La producción de tarjetas no se detuvo (package creation normal); el catch-up cayó en 11, 12 y 15 ago.',
+    'Semana 08-10: TR/1k sube fuerte (Estafeta +67%, 99min +78%) por envíos ~16% abajo Y más tickets. Es real.',
+    'DR de agosto en null: cohorte inmadura (va en 71.13 / 73.59 / 72.34).',
     'Envíos históricos y tickets verificados contra lo publicado: cero drift.',
   ],
 };
@@ -40,9 +44,9 @@ const ALL_MONTHS = ['Ene 26','Feb 26','Mar 26','Abr 26','May 26','Jun 26','Jul 2
 
 // cr = tix/env*1000 · tix = tickets del form · env = envíos de Frodo
 const RAW = {
-  'DHL':     { cr:[3.68,3.28,1.75,3.49,4.99,3.39,2.12,3.69], tix:[135,68,68,108,134,96,60,39], env:[36670,20738,38867,30925,26847,28307,28334,10565] },
-  'Estafeta':{ cr:[3.81,5.43,2.8,5.74,5.8,4.58,3.27,4.03], tix:[1363,1005,1097,1669,1464,1144,843,391], env:[357730,185203,392259,290616,252491,250049,257597,97000] },
-  '99min':   { cr:[8.29,11.54,6.02,10.67,9.92,6.44,3.59,5.92], tix:[1533,1114,1200,1617,1277,828,479,291], env:[185030,96497,199476,151573,128726,128506,133309,49181] },
+  'DHL':     { cr:[3.68,3.28,1.75,3.49,4.99,3.39,2.12,5.03], tix:[135,68,68,108,134,96,60,61], env:[36670,20738,38867,30925,26847,28307,28334,12117] },
+  'Estafeta':{ cr:[3.81,5.43,2.8,5.74,5.8,4.58,3.27,4.91], tix:[1363,1005,1097,1669,1464,1144,843,557], env:[357730,185203,392259,290616,252491,250049,257597,113333] },
+  '99min':   { cr:[8.29,11.54,6.02,10.67,9.92,6.44,3.59,7.54], tix:[1533,1114,1200,1617,1277,828,479,427], env:[185030,96497,199476,151573,128726,128506,133309,56657] },
 };
 
 // Delivery Rate % · null = mes aún inmaduro (los envíos recientes no han terminado su ciclo)
@@ -53,24 +57,24 @@ const DR_DATA = {
 };
 
 // Semanas lunes–domingo (ISO)
-const SEM_WEEKS = ['01-05','01-12','01-19','01-26','02-02','02-09','02-16','02-23','03-02','03-09','03-16','03-23','03-30','04-06','04-13','04-20','04-27','05-04','05-11','05-18','05-25','06-01','06-08','06-15','06-22','06-29','07-06','07-13','07-20','07-27','08-03'];
-const SEM_LABELS = ['05 ene','12 ene','19 ene','26 ene','02 feb','09 feb','16 feb','23 feb','02 mar','09 mar','16 mar','23 mar','30 mar','06 abr','13 abr','20 abr','27 abr','04 may','11 may','18 may','25 may','01 jun','08 jun','15 jun','22 jun','29 jun','06 jul','13 jul','20 jul','27 jul','03 ago'];
+const SEM_WEEKS = ['01-05','01-12','01-19','01-26','02-02','02-09','02-16','02-23','03-02','03-09','03-16','03-23','03-30','04-06','04-13','04-20','04-27','05-04','05-11','05-18','05-25','06-01','06-08','06-15','06-22','06-29','07-06','07-13','07-20','07-27','08-03','08-10'];
+const SEM_LABELS = ['05 ene','12 ene','19 ene','26 ene','02 feb','09 feb','16 feb','23 feb','02 mar','09 mar','16 mar','23 mar','30 mar','06 abr','13 abr','20 abr','27 abr','04 may','11 may','18 may','25 may','01 jun','08 jun','15 jun','22 jun','29 jun','06 jul','13 jul','20 jul','27 jul','03 ago','10 ago'];
 
 const SEM_DATA = {
   'DHL':     {
-    env:[5560,4389,18217,6934,5629,2181,8551,4377,6075,2439,14299,12904,4614,9213,7151,7649,7138,6073,5326,7221,6537,6401,5979,7071,6955,6124,6464,6092,5709,6659,6150],
-    tix:[24,38,32,35,18,18,7,24,16,14,10,20,13,20,31,28,28,25,37,44,21,34,21,12,24,13,16,11,11,16,27],
-    tr: [4.32,8.66,1.76,5.05,3.2,8.25,0.82,5.48,2.63,5.74,0.7,1.55,2.82,2.17,4.34,3.66,3.92,4.12,6.95,6.09,3.21,5.31,3.51,1.7,3.45,2.12,2.48,1.81,1.93,2.4,4.39],
+    env:[5560,4389,18217,6934,5629,2181,8551,4377,6075,2439,14299,12904,4614,9213,7151,7649,7138,6073,5326,7221,6537,6401,5979,7071,6955,6124,6464,6092,5709,6659,6150,5154],
+    tix:[24,38,32,35,18,18,7,24,16,14,10,20,13,20,31,28,28,25,37,44,21,34,21,12,24,13,16,11,11,16,27,32],
+    tr: [4.32,8.66,1.76,5.05,3.2,8.25,0.82,5.48,2.63,5.74,0.7,1.55,2.82,2.17,4.34,3.66,3.92,4.12,6.95,6.09,3.21,5.31,3.51,1.7,3.45,2.12,2.48,1.81,1.93,2.4,4.39,6.21],
   },
   'Estafeta':{
-    env:[59317,43608,169003,68245,45841,22457,85895,31010,87220,19633,126632,125496,46020,91000,66795,66889,70227,58487,49677,68302,58988,55069,53356,59881,61334,59657,53893,57799,52074,62315,57720],
-    tix:[234,327,324,382,245,233,221,287,238,222,182,337,505,377,361,336,269,333,361,350,340,294,355,230,204,181,203,179,189,181,221],
-    tr: [3.94,7.5,1.92,5.6,5.34,10.38,2.57,9.26,2.73,11.31,1.44,2.69,10.97,4.14,5.4,5.02,3.83,5.69,7.27,5.12,5.76,5.34,6.65,3.84,3.33,3.03,3.77,3.1,3.63,2.9,3.83],
+    env:[59317,43608,169003,68245,45841,22457,85895,31010,87220,19633,126632,125496,46020,91000,66795,66889,70227,58487,49677,68302,58988,55069,53356,59881,61334,59657,53893,57799,52074,62315,57720,47881],
+    tix:[234,327,324,382,245,233,221,287,238,222,182,337,505,377,361,336,269,333,361,350,340,294,355,230,204,181,203,179,189,181,221,307],
+    tr: [3.94,7.5,1.92,5.6,5.34,10.38,2.57,9.26,2.73,11.31,1.44,2.69,10.97,4.14,5.4,5.02,3.83,5.69,7.27,5.12,5.76,5.34,6.65,3.84,3.33,3.03,3.77,3.1,3.63,2.9,3.83,6.41],
   },
   '99min':   {
-    env:[25960,24635,91945,35846,25438,11361,40739,18959,39523,13202,65561,64657,23408,46522,34592,36819,35511,30336,25179,34682,29783,29067,27292,31395,31606,27554,31072,29499,26854,31183,28434],
-    tix:[254,381,385,448,309,273,252,267,276,242,139,371,376,325,425,425,291,317,354,319,207,243,222,174,160,98,105,100,105,131,156],
-    tr: [9.78,15.47,4.19,12.5,12.15,24.03,6.19,14.08,6.98,18.33,2.12,5.74,16.06,6.99,12.29,11.54,8.19,10.45,14.06,9.2,6.95,8.36,8.13,5.54,5.06,3.56,3.38,3.39,3.91,4.2,5.49],
+    env:[25960,24635,91945,35846,25438,11361,40739,18959,39523,13202,65561,64657,23408,46522,34592,36819,35511,30336,25179,34682,29783,29067,27292,31395,31606,27554,31072,29499,26854,31183,28434,24516],
+    tix:[254,381,385,448,309,273,252,267,276,242,139,371,376,325,425,425,291,317,354,319,207,243,222,174,160,98,105,100,105,131,156,240],
+    tr: [9.78,15.47,4.19,12.5,12.15,24.03,6.19,14.08,6.98,18.33,2.12,5.74,16.06,6.99,12.29,11.54,8.19,10.45,14.06,9.2,6.95,8.36,8.13,5.54,5.06,3.56,3.38,3.39,3.91,4.2,5.49,9.79],
   },
 };
 
