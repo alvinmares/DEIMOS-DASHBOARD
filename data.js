@@ -1,10 +1,17 @@
 // ══════════════════════════════════════════════════════
 // DEIMOS DASHBOARD — CAPA DE DATOS
 // Único archivo que se edita en cada actualización.
-// Corte de datos: 12 ago 2026  ·  Publicado: 13 ago 2026
+// Corte de datos: 12 ago 2026  ·  Publicado: 17 ago 2026
 // Fuentes: tickets = Google Form lifecycle · envíos/DR = etl.mx__contract.frodo__deliveries
-// ⚠️ Frodo no tiene envíos creados el 2026-08-10 (lunes). El volumen aparece
-//    corrido a mar 11 / mié 12 (~26k c/u vs ~19k de un día hábil normal).
+//
+// ⚠️ Frodo trae huecos en agosto y por eso el corte NO avanzó del 12:
+//      10 ago (lun) — 0 envíos creados
+//      13 ago (jue) — 3,745 contra ~14.6k esperados (parcial)
+//      14 ago (vie) — 0 envíos creados
+//      15 ago (sáb) — 21,616 contra ~10.7k de un sábado normal (inflado)
+//    Los tres carriers caen en la misma proporción, así que es ingesta y no
+//    operación. Los tickets del form sí están al día: publicar con este corte
+//    inflaría el TR/1k. Tampoco se cierra la semana 08-10: le faltan 2 días.
 // ══════════════════════════════════════════════════════
 
 // corte      = último día con datos de envíos (y de tickets: van alineados)
@@ -14,14 +21,17 @@
 // notas      = caveats del ciclo; salen en el tooltip del pie
 const DATA_META = {
   corte: '2026-08-12',
-  publicado: '2026-08-13',
+  publicado: '2026-08-17',
   etiqueta: '12 ago 2026',
-  actualizado: '2026-08-13T12:38:00-06:00',
-  ok: true,
-  mensaje: 'Envíos e históricos sin drift · tickets alineados al corte',
+  actualizado: '2026-08-17T10:19:00-06:00',
+  ok: false,
+  mensaje: 'Corte sin avanzar: Frodo no tiene el 10 ni el 14 ago',
   notas: [
-    'Frodo no tiene envíos creados el lun 10 ago; el volumen aparece corrido a mar 11 / mié 12.',
-    'DR de agosto en null: la cohorte del mes aún no madura.',
+    'Frodo: 10 y 14 ago sin envíos creados; 13 ago parcial (3,745 vs ~14.6k); 15 ago inflado para ser sábado.',
+    'Los huecos pegan a los tres carriers en la misma proporción → ingesta, no operación.',
+    'Semana 08-10 sin cerrar: le faltan dos días de envíos.',
+    'DR de agosto en null: la cohorte del mes aún no madura (va en 80.65 / 84.81 / 82.02).',
+    'Envíos históricos y tickets verificados contra lo publicado: cero drift.',
   ],
 };
 
@@ -37,9 +47,9 @@ const RAW = {
 
 // Delivery Rate % · null = mes aún inmaduro (los envíos recientes no han terminado su ciclo)
 const DR_DATA = {
-  'DHL':     [83.97,87.68,84.09,86.91,85.09,86,84.54,null],
-  'Estafeta':[90.73,91.58,90.17,91.45,92.01,92.22,91.6,null],
-  '99min':   [93.46,94.37,92.05,91.9,92.5,91.65,91.23,null],
+  'DHL':     [83.97,87.68,84.09,86.91,85.02,86,84.56,null],
+  'Estafeta':[90.73,91.58,90.17,91.45,91.97,92.22,91.63,null],
+  '99min':   [93.46,94.37,92.05,91.9,92.5,91.65,91.38,null],
 };
 
 // Semanas lunes–domingo (ISO)
