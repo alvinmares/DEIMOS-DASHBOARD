@@ -9,7 +9,7 @@ Trackea **Ticket Rate / 1k envíos** y **Delivery Rate** para DHL, Estafeta y 99
 | **Repo** | `alvinmares/DEIMOS-DASHBOARD` (público, GitHub Pages desde `main` / root) |
 | **Owner** | Alvin Mares — carriers operations Nu México |
 | **Autor original** | Carlos Torruco (transferido 10 ago 2026) |
-| **Último corte** | 12 ago 2026 |
+| **Último corte** | 22 ago 2026 |
 
 ---
 
@@ -41,7 +41,7 @@ README.md
 | `DR_DATA` | Delivery Rate % mensual. `null` = mes aún inmaduro |
 | `SEM_WEEKS` / `SEM_LABELS` | Semanas lunes–domingo (ISO) |
 | `SEM_DATA` | `env` / `tix` / `tr` semanal por carrier |
-| `QUEJAS_DATA` | Dona de motivos de queja (ver §7 — pendiente) |
+| `QUEJAS_CATS` / `QUEJAS_MES` | Motivos de queja: catálogo y desglose mensual por carrier (ver §8) |
 
 Todos los arrays de un mismo bloque deben tener **exactamente la misma longitud** que `ALL_MONTHS` (o `SEM_WEEKS`).
 
@@ -103,6 +103,23 @@ en `mensaje`, porque esa línea se muestra en el dashboard.
 | H | `Elige la Mensajería` → `DHL` / `Estafeta` / `99 Minutos` |
 | I | `¿Cómo te ayudamos?` (motivo de nivel 1) |
 | O | `¿Qué escenario se presenta?` (detalle) |
+
+La col. **I** es la que alimenta la dona de motivos. Tiene 5 valores vigentes, pero
+llegan **6 cadenas distintas**: "Cambio de carrier" aparece con el texto mal escrito
+(`Solosi`) hasta el 8 ago 2026 y bien escrito desde el 9. **Hay que fundirlas**, si no
+el motivo sale partido en dos.
+
+| Valor en col. I | Etiqueta en el dash |
+|---|---|
+| Tarjeta entregada, pero el cliente indica que no la recibió | Falsa entrega |
+| Entregas cruzadas | Entregas cruzadas |
+| Problemas con la Mensajería | Problemas con la mensajería |
+| Cambio de carrier (`Solosi…` y `Solo si…`) | Cambio de carrier |
+| Problemas internos | Problemas internos |
+
+La col. **O** no es una taxonomía paralela: es el sub-desglose de *un solo* motivo.
+Sus 3 valores suman exactamente los tickets de "Problemas con la Mensajería" (998 en
+2026 YTD), y viene vacía en el resto. Hoy el dash no la usa.
 
 ⚠️ **Filtra siempre `H` a los tres nombres exactos.** Hay filas basura donde `H` trae un UUID en lugar del carrier (form mal versionado). Sin el filtro los conteos se inflan.
 
@@ -272,14 +289,44 @@ Esto ya causó un error real: el dash publicaba julio 2026 en **76.05 / 80.15 / 
 
 ## 8. Pendientes conocidos
 
-- **Chart "¿De qué se quejan?"** — usa una taxonomía (*Sin cobertura*, *Múltiples intentos*, *Punto forzado*, *Sobre abierto*…) que ya no existe en el form actual. El form vigente solo tiene 5 categorías en la col. I y 3 en la col. O. Los números en `QUEJAS_DATA` vienen del ciclo de Carlos y **no son reproducibles**. Hay que redefinir el mapeo con la estructura actual del form y documentarlo.
-- **Ventana de la dona** — sin definir. Cuando se rehaga, fijarla explícitamente (ej. 2026 YTD). Mientras tanto sus 3 subtítulos muestran el rango del corte, que probablemente no es la ventana real de esos números.
 - **Doble render en "Por carrier"** — las excepciones cosméticas de Chart.js (§4, paso 7). Se arregla destruyendo la instancia previa antes de recrear cada mini-gráfica.
 - **El pie de estado vive en `data.js`** — su lugar natural es `index.html`. Está en `data.js` porque es el archivo que se reescribe cada ciclo y porque `index.html` (~86 KB) no se puede parchear por la API de GitHub sin retransmitirlo completo.
 
 ---
 
-## 9. Severidad TR/1k
+## 9. La pestaña de quejas y su filtro de periodo
+
+Reconstruida el 25 ago 2026. Antes eran totales fijos heredados del ciclo de Carlos,
+con una taxonomía que ya no existía en el formulario y una ventana de fechas que nadie
+sabía cuál era. Hoy:
+
+- **`QUEJAS_MES`** guarda el desglose **mensual** por carrier y motivo, alineado a
+  `ALL_MONTHS`. Se regenera con la query documentada en el encabezado del bloque en
+  `data.js` (col. I del Sheet, agrupada por mes, cortada en `DATA_META.corte`).
+- **La autovalidación del pie** revisa que cada arreglo tenga el largo de `ALL_MONTHS`
+  y que los motivos **sumen exactamente** `RAW[carrier].tix`. Si te sale
+  ⚠ *Actualización con problemas* nombrando `QUEJAS_MES`, es que la agregación por
+  motivo y la de tickets no cuadran: casi siempre es la doble cadena de
+  "Cambio de carrier" (§3) o un corte de fechas distinto.
+- **El filtro** vive en un bloque al final de `index.html`. Da presets
+  (2026 YTD / últimos 3 meses / mes actual) y un rango libre mes-desde → mes-hasta,
+  y con cada cambio recalcula la dona, los 4 KPIs y la tabla de detalle de los tres
+  carriers. Si el último mes del rango es parcial lo avisa en naranja.
+- El bloque **se desactiva solo** si `QUEJAS_MES` no existe, así que un `data.js`
+  viejo no rompe la pestaña. `QUEJAS_DATA` sigue existiendo, derivado del acumulado
+  del año, solo por compatibilidad.
+
+> El markup hardcodeado de los 3 paneles **no se borró**: el render lo sobrescribe.
+> Es deuda cosmética, no un riesgo — pero si algún día ves números viejos en los KPIs,
+> es que el render no corrió, no que la data esté mal.
+
+> Los verbatims del tercer card siguen siendo una muestra estática y **no** se filtran.
+> Igual la nota metodológica del 81–91% en la caja de arriba: es un rango del año
+> completo y no se recalcula por periodo.
+
+---
+
+## 10. Severidad TR/1k
 
 | Color | Rango | CSS |
 |---|---|---|
@@ -292,4 +339,4 @@ Delivery Rate (higher is better): 🟢 ≥ 90 · 🟡 85–90 · 🟠 75–85 ·
 
 ---
 
-*Actualizado: 13 ago 2026 — datos al 12 ago 2026 (agosto parcial)*
+*Actualizado: 25 ago 2026 — datos al 22 ago 2026 (agosto parcial)*
