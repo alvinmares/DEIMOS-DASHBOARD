@@ -38,6 +38,8 @@ const DATA_META = {
     'DR de mayo bajó un pelo (DHL 85.02→84.89, Estafeta 91.97→91.87) con envíos idénticos: reclasificación de status en Frodo, no volumen. DHL sigue en su banda normal de 84–87%.',
     'Envíos y tickets históricos ene–jul verificados contra lo publicado: cero drift.',
     'Tickets cortados al 22 ago para alinear con envíos; los 52 del 23–25 ago entran el próximo ciclo.',
+    'Nueva sección de geografía en la pestaña de quejas: estado (col. J del form, 32 códigos normalizados, 86% de cobertura) con drill-down a CP. Son conteos, NO tasas: no existe denominador de envíos por estado en ninguna fuente.',
+    'Hotspot que salta a la vista: CP 54715 (Valle de la Hacienda, Edo. de México) concentra 113 tickets de 99minutos en el año, 6% del estado.',
     'Pestaña de quejas reconstruida: taxonomía vigente del form (5 motivos) con desglose mensual y filtro de periodo. Los totales cuadran con RAW.tix. Cierra los pendientes de la §8 de la guía.',
     'Vista diaria: ene–abr viene de cargas por lote (17 días hábiles en 0 y picos de hasta 13x); la granularidad diaria solo es confiable de mayo en adelante.',
   ],
@@ -243,6 +245,110 @@ const QUEJAS_DATA = (function () {
   return o;
 })();
 
+// ── Geografía de las quejas ───────────────────────────────────────────
+// De dónde vienen los tickets. Mismas filas del form que QUEJAS_MES:
+// col. J = estado (código de 2 letras, ya normalizado en el form: llegan los
+// 32 estados y nada más), col. M = CP verificado en SEPOMEX, col. N = colonia,
+// que se usa solo como etiqueta legible del CP (la colonia dominante).
+//
+// ⚠️ NO hay denominador de envíos por estado. frodo__deliveries no tiene
+// ninguna columna geográfica y logistics_information.delivery_address_state
+// existe pero está NULL en sus 55M filas. Entonces esto son CONTEOS, no un
+// TR/1k por estado: un estado alto en la lista puede estar ahí nomás porque
+// ahí enviamos más tarjetas. Lo que sí se puede leer sin denominador es el
+// cambio contra el periodo anterior y la concentración por CP.
+//
+// 'ND' = tickets sin estado capturado (~14%; el campo es opcional en el form).
+// Se deja explícito para que los totales cuadren con RAW.tix.
+//
+// GEO_CP: solo pares carrier|estado con ≥40 tickets, y de cada uno el top 6 de
+// CPs. `c` = [CP, colonia dominante, 8 meses]; `t` = total mensual de tickets
+// CON CP de ese par, para poder mostrar qué % cubre el top 6. El resto de los
+// CPs no se guarda: la cola son casi todos de 1 ticket.
+// Query: select month(A), H, J, M, N, count(A) where ... group by 1,2,3,4,5
+const GEO_ESTADOS = {
+  AG:'Aguascalientes', BC:'Baja California', BS:'Baja California Sur', CH:'Chihuahua',
+  CL:'Colima', CM:'Campeche', CO:'Coahuila', CS:'Chiapas',
+  DF:'Ciudad de México', DG:'Durango', EM:'Estado de México', GR:'Guerrero',
+  GT:'Guanajuato', HG:'Hidalgo', JA:'Jalisco', MI:'Michoacán',
+  MO:'Morelos', NA:'Nayarit', NL:'Nuevo León', OA:'Oaxaca',
+  PU:'Puebla', QR:'Quintana Roo', QT:'Querétaro', SI:'Sinaloa',
+  SL:'San Luis Potosí', SO:'Sonora', TB:'Tabasco', TL:'Tlaxcala',
+  TM:'Tamaulipas', VE:'Veracruz', YU:'Yucatán', ZA:'Zacatecas',
+  ND:'Sin dato',
+};
+
+// estado → 8 meses de ALL_MONTHS, por carrier
+const GEO_MES = {
+  'DHL': {AG:[1,0,0,0,0,0,0,0], BC:[2,2,1,1,2,1,1,3], BS:[0,0,1,1,1,0,0,1], CH:[3,1,3,10,8,10,3,5], CL:[0,0,1,0,1,0,0,0], CM:[1,1,1,2,4,5,1,0], CO:[1,3,0,7,3,4,1,8], CS:[10,7,3,16,18,13,5,5], DF:[3,2,3,3,4,5,2,2], DG:[0,2,0,2,0,1,3,1], EM:[14,7,8,3,10,5,5,11], GR:[6,3,1,3,4,1,0,5], GT:[1,1,1,1,3,3,1,1], HG:[3,0,2,2,2,2,1,0], JA:[3,1,3,1,2,3,3,1], MI:[1,0,0,1,1,0,0,1], MO:[1,0,1,0,1,0,0,0], NA:[0,1,2,2,0,0,0,0], NL:[2,0,0,3,3,2,2,0], OA:[1,1,1,1,1,0,1,0], PU:[6,1,2,2,4,6,1,0], QR:[1,3,1,5,3,1,2,1], QT:[1,2,1,4,3,2,1,2], SI:[1,0,1,1,0,0,0,0], SL:[2,3,0,6,6,1,2,1], SO:[1,0,1,0,4,1,0,1], TB:[9,1,2,2,10,7,6,4], TL:[3,1,0,1,0,1,0,4], TM:[4,6,8,7,14,5,4,4], VE:[10,5,6,10,11,6,6,6], YU:[3,1,0,1,1,0,0,3], ZA:[2,1,1,1,1,0,1,3], ND:[39,12,13,9,9,11,8,11]},
+  'Estafeta': {AG:[7,7,9,16,5,14,7,13], BC:[50,99,101,88,113,78,47,55], BS:[24,4,10,18,8,6,3,9], CH:[44,24,49,65,57,41,26,34], CL:[0,2,2,8,0,2,2,7], CM:[8,11,12,15,22,13,10,5], CO:[41,31,26,33,51,42,22,27], CS:[65,56,36,92,68,63,37,30], DF:[74,37,35,59,81,54,42,52], DG:[18,13,16,20,22,16,14,12], EM:[148,79,95,140,131,111,73,99], GR:[20,12,27,26,30,12,26,30], GT:[38,28,41,51,52,40,20,36], HG:[31,20,24,27,36,21,17,24], JA:[92,65,70,99,102,69,67,39], MI:[31,21,18,25,33,29,22,6], MO:[6,2,2,11,18,10,5,9], NA:[14,11,13,12,15,8,4,12], NL:[35,24,41,52,62,40,23,41], OA:[18,8,10,22,26,16,12,19], PU:[36,23,22,33,37,36,12,22], QR:[40,41,36,47,45,34,13,27], QT:[25,12,12,13,14,17,16,23], SI:[11,14,19,28,37,42,11,19], SL:[16,13,6,17,11,9,6,9], SO:[7,11,9,11,15,13,3,4], TB:[47,17,17,32,24,40,27,17], TL:[1,3,1,4,4,1,3,2], TM:[32,24,33,45,56,26,24,20], VE:[48,38,42,55,66,49,32,50], YU:[29,35,34,21,33,31,10,38], ZA:[7,2,6,4,9,11,3,8], ND:[300,218,223,480,181,150,204,126]},
+  '99min': {AG:[20,10,9,12,16,8,0,2], BC:[39,51,35,16,23,13,10,12], BS:[6,1,8,8,7,6,1,0], CH:[5,5,6,5,0,2,1,2], CL:[2,0,2,0,5,3,0,2], CM:[9,6,4,5,6,5,3,4], CO:[42,31,28,18,2,7,15,10], CS:[3,4,5,5,10,6,3,6], DF:[102,86,79,147,164,108,50,96], DG:[8,12,17,6,8,4,7,7], EM:[350,218,227,389,184,197,106,154], GR:[9,7,18,8,9,15,3,11], GT:[40,48,20,61,40,37,15,53], HG:[20,21,30,56,58,19,12,6], JA:[48,29,32,55,48,20,10,29], MI:[9,7,9,17,12,2,12,5], MO:[27,26,27,24,4,13,2,4], NA:[4,5,6,1,1,1,0,4], NL:[51,36,47,33,37,45,51,62], OA:[54,33,42,67,55,23,10,24], PU:[252,176,217,353,176,71,25,68], QR:[5,4,5,6,7,9,4,4], QT:[50,19,34,47,49,24,13,20], SI:[10,7,3,10,8,3,2,3], SL:[2,3,4,5,9,5,2,4], SO:[8,13,18,7,4,1,4,3], TB:[9,14,7,6,5,0,1,3], TL:[65,52,52,66,63,25,6,14], TM:[7,8,8,7,3,2,3,3], VE:[117,87,96,92,93,78,33,52], YU:[16,3,7,12,11,4,4,4], ZA:[9,7,10,3,3,5,2,6], ND:[135,85,88,70,157,67,69,34]},
+};
+
+const GEO_CP = {
+  '99min|AG':{c:[['20126','Montebello Della Stanza',[2,0,1,5,3,0,0,0]],['20326','Bosque Sereno',[5,1,0,0,1,0,0,1]],['20206','José López Portillo',[2,1,0,0,1,2,0,0]],['20070','San Marcos',[3,1,0,1,0,0,0,0]],['20040','Altavista',[2,1,0,0,0,1,0,0]],['20328','Pocitos',[1,1,0,2,0,0,0,0]]],t:[20,10,9,12,15,7,0,2]},
+  '99min|BC':{c:[['22564','Urbi Quinta del Cedro',[3,5,2,0,2,0,0,0]],['22206','El Pípila',[3,1,0,0,1,0,2,1]],['22253','El Refugio',[0,0,6,0,1,0,0,0]],['22545','Las Cumbres',[3,1,2,0,0,0,0,0]],['22010','Zona Urbana Río Tijuana',[1,3,1,0,0,0,0,0]],['21395','Villa Verde',[0,0,2,0,0,0,3,0]]],t:[39,51,34,16,23,13,10,11]},
+  '99min|CO':{c:[['26284','Lomas del Valle',[6,2,1,1,0,1,0,1]],['26236','Fundadores',[2,2,1,0,0,0,0,0]],['26272','San Antonio',[2,2,0,0,0,0,0,0]],['27810','27810',[2,1,0,0,0,0,0,1]],['27900',' Francisco I. Madero',[3,0,0,0,0,1,0,0]],['27904','Insurgentes',[2,1,1,0,0,0,0,0]]],t:[42,31,28,18,2,7,15,10]},
+  '99min|CS':{c:[['29130','San Marcos',[0,3,0,2,0,0,0,0]],['29100','El jobo',[0,0,0,1,0,3,0,1]],['29060','Penipak',[0,0,2,0,0,1,0,0]],['29057',' Colonia San José Terán',[0,0,0,0,1,1,0,1]],['29027','San José Chapultepec',[0,0,1,0,1,0,0,0]],['30870','San Juan',[0,0,1,0,1,0,0,0]]],t:[3,3,5,5,10,6,2,6]},
+  '99min|DF':{c:[['13200','Miguel Hidalgo',[0,0,2,5,9,0,0,0]],['13360','La Conchita Zapotitlán',[0,1,0,6,0,4,0,0]],['11320','Anáhuac I Sección',[1,1,0,3,2,0,0,0]],['13270','Del Mar',[0,0,2,1,3,0,0,0]],['11529','Ampliación Granada',[0,1,1,0,3,0,0,0]],['13278','Villa Centroamericana',[0,0,1,2,2,0,0,0]]],t:[30,20,25,61,55,29,10,22]},
+  '99min|DG':{c:[['34000','Victoria de Durango Centro',[0,0,1,2,2,1,1,0]],['34147','Col. Gaviotas II',[0,1,2,0,1,0,0,0]],['35045','independencia',[0,1,1,0,0,1,1,0]],['34105','Colinas del Saltito',[1,0,1,0,0,0,0,0]],['34168','Ampliación Las Rosas',[2,0,0,0,0,0,0,0]],['34270','Hipódromo',[1,0,0,0,0,1,0,0]]],t:[8,11,17,5,8,4,7,6]},
+  '99min|EM':{c:[['54715','Valle de la Hacienda',[19,14,17,25,13,6,8,11]],['52927','San Miguel Xochimanga',[11,6,5,14,1,0,0,0]],['54720','Jardines de la Hacienda Sur',[3,2,3,10,5,3,6,5]],['54938','Bonito Tultitlán (Lote 60)',[4,3,3,6,0,3,5,5]],['55270','El Chamizal',[5,4,1,5,5,3,1,4]],['54719','Claustros de San Miguel',[5,0,1,6,5,2,2,4]]],t:[346,212,225,378,181,192,102,150]},
+  '99min|GR':{c:[['39753','San Agustin',[2,0,2,1,2,2,0,0]],['39898','39898',[1,0,2,0,1,2,0,0]],['39759','Ampliación José López Portillo',[1,1,1,1,0,1,0,0]],['39704','Yoloxochil',[0,2,0,1,0,1,0,1]],['39773','Colonia Simon Bolivar',[4,0,0,0,0,0,0,0]],['39070',' Villa Moderna',[0,0,3,1,0,0,0,0]]],t:[9,7,18,8,9,15,3,10]},
+  '99min|GT':{c:[['37340','Obrera',[1,1,1,0,2,4,0,0]],['37207','La Santa Cruz',[1,2,0,1,1,1,0,2]],['37000','Centro',[0,0,0,0,0,1,0,6]],['37510','Parque Manzanares',[0,0,0,0,0,1,1,5]],['37209','37209',[2,0,0,0,1,3,0,0]],['38090','Santa María',[2,2,0,0,1,1,0,0]]],t:[38,48,18,61,40,34,14,51]},
+  '99min|HG':{c:[['42083','San Antonio el Desmonte',[0,1,1,12,9,2,0,0]],['42082','Paseos de la Plata',[0,0,1,11,6,3,0,0]],['42115','El Huixmí',[0,0,1,5,7,0,0,0]],['42186','Paseos de Chavarría',[3,0,3,1,2,2,0,1]],['42110','Santiago Tlapacoya Centro',[0,0,2,3,6,0,0,0]],['42119','Real Toledo',[0,0,0,2,6,0,0,0]]],t:[20,21,30,56,57,19,12,6]},
+  '99min|JA':{c:[['45402','Santa Cruz de las Huertas',[1,1,3,2,1,0,1,0]],['45410',' Col Loma Real',[3,1,1,2,0,1,0,0]],['45189','Mesa de los Ocotes',[0,1,0,5,2,0,0,0]],['45066','Arenales Tapatíos',[0,0,2,1,1,0,1,3]],['45200','Fuente caliza 08:27 p.m. 1815 ',[0,2,2,0,1,1,0,0]],['45650','Lomas de San Agustín',[0,1,2,0,1,0,0,2]]],t:[48,27,31,54,47,20,10,29]},
+  '99min|MI':{c:[['58000','Centro Histórico',[0,0,0,5,0,0,0,1]],['60154','Los Gómez',[1,0,2,0,0,0,0,0]],['61514','El Moral',[2,0,1,0,0,0,0,0]],['61609','Morelos',[0,0,1,2,0,0,0,0]],['60250','Paracho de Verduzco Centro',[0,1,0,0,1,0,0,0]],['60950','Centro',[0,1,0,0,0,0,1,0]]],t:[8,7,9,17,12,2,12,5]},
+  '99min|MO':{c:[['62574','José López Portillo',[5,2,6,4,0,2,0,0]],['62520','San José',[1,2,1,0,2,3,0,0]],['62573','El Paraje Texcal',[1,2,3,3,0,0,0,0]],['62570','Tejalpa',[2,1,1,3,0,1,0,0]],['62575','Independencia',[2,1,0,3,0,1,0,0]],['62300','Ahuatepec',[3,3,0,0,0,0,0,0]]],t:[26,26,27,24,4,13,2,4]},
+  '99min|NL':{c:[['66612','Nuevo las Puentes 4to Sector',[0,0,0,0,1,5,8,11]],['66636','Nuevo Amanecer Primer Sector',[0,0,1,0,1,2,5,8]],['66610','Ex-Hacienda Santa Rosa',[0,0,0,0,0,2,3,11]],['66490','Constituyentes de Querétaro Se',[2,0,1,5,3,0,0,1]],['66614','Arboledas de Santa Rosa',[0,0,0,0,0,0,4,5]],['67485','Bellavista',[4,3,0,0,0,0,0,0]]],t:[49,34,45,32,36,45,50,62]},
+  '99min|OA':{c:[['68274','Pueblo Nuevo',[5,2,3,1,6,4,0,3]],['68258','San Pablo Etla',[3,3,1,2,4,2,0,2]],['68285','Jardines de la Primavera',[3,1,1,4,3,1,0,0]],['71233','Santa Elena',[3,0,5,1,3,1,0,0]],['68013','Lomas de Santa Rosa',[1,0,1,4,3,0,0,2]],['68016','Vista Hermosa',[1,2,0,4,2,0,0,2]]],t:[52,31,42,65,54,23,10,23]},
+  '99min|PU':{c:[['72498','San Isidro Castillotla',[2,1,1,13,20,9,1,3]],['72620','San Miguel Xoxtla',[7,3,12,13,7,2,0,2]],['72450','El Patrimonio',[9,6,9,14,6,1,0,0]],['72017','Nueva San Salvador',[5,6,4,8,13,1,0,1]],['72016','Real de Guadalupe',[11,3,6,11,3,2,0,1]],['72160','La Paz',[14,7,4,5,5,1,0,0]]],t:[245,168,213,346,169,70,23,65]},
+  '99min|QR':{c:[['77723','El Edén Playa',[0,1,0,1,0,1,0,1]],['77712','Ejidal',[0,1,1,0,1,0,0,0]],['77710','Playa del Carmen Centro',[0,0,1,0,0,1,1,0]],['77580','Joaquín Zetina Gasca',[1,0,0,1,0,0,0,0]],['77728','Luis Donaldo Colosio',[1,0,0,0,1,0,0,0]],['76220',' LOMAS DEL PEDREGAL',[0,0,1,1,0,0,0,0]]],t:[5,4,4,6,6,9,4,4]},
+  '99min|QT':{c:[['76118','Eduardo Loarca Castillo',[1,1,6,10,5,2,0,0]],['76116','Ciudad del Sol',[9,2,0,1,10,1,0,0]],['76246','Real Solare',[4,1,2,3,6,1,2,4]],['76148','Villas de Santiago',[8,3,4,1,2,1,1,1]],['76267','Saldarriaga',[1,0,0,1,3,4,2,2]],['76220','Santa Rosa de Jauregui',[1,1,1,5,3,0,0,0]]],t:[49,19,33,45,48,24,13,18]},
+  '99min|SI':{c:[['81121','Campestre Valle',[1,2,0,1,0,0,0,0]],['81820','Los Ayalos',[1,2,0,0,0,0,0,0]],['82150','Los Ángeles (Santa Fe)',[1,0,0,0,2,0,0,0]],['81110','Juan José Ríos',[0,0,1,1,0,1,0,0]],['81075','Col. Las Huertas',[0,2,0,0,0,0,0,0]],['80080','El Barrio',[0,0,0,0,2,0,0,0]]],t:[10,7,3,9,8,3,2,3]},
+  '99min|SO':{c:[['85490','Ampliación Independencia',[0,3,1,1,0,0,0,0]],['83000','Centro',[1,0,1,0,0,0,0,1]],['83070','San Juan',[0,0,2,1,0,0,0,0]],['83177','Puerta Real Residencial',[1,1,0,0,0,0,0,0]],['83150','Esquina con avenida 3 Pegado a',[0,1,1,0,0,0,0,0]],['83499','Campestre',[0,2,0,0,0,0,0,0]]],t:[6,13,18,7,4,1,4,3]},
+  '99min|TB':{c:[['86090','Gaviotas Sur Sección San José',[1,2,1,0,0,0,0,0]],['86288','si',[1,1,0,2,0,0,0,0]],['86610',' Ejido carrizal',[2,1,0,0,0,0,0,0]],['86099','0',[0,1,1,0,0,0,0,0]],['86029','José María Pino Suárez',[0,0,0,1,1,0,0,0]],['86220','Centro',[0,0,0,0,1,0,0,1]]],t:[9,14,7,6,5,0,1,3]},
+  '99min|TL':{c:[['90100','San Esteban Tizatlán',[5,11,6,6,7,3,0,0]],['90110','Santa María Acuitlapilco',[8,7,3,8,7,1,0,3]],['90000','Tlaxcala Centro',[2,3,2,5,1,0,0,0]],['90806','Texcacoac',[3,0,2,2,3,0,2,0]],['90810','Guadalupe Ixcotla',[5,0,1,5,1,0,0,0]],['90355','FOVISSSTE Loma Verde',[1,3,1,3,1,1,0,0]]],t:[63,51,50,65,63,25,6,14]},
+  '99min|TM':{c:[['88715','Villa Florida Sector B',[1,0,2,0,0,0,0,0]],['88799','Valle Soleado',[0,1,0,0,1,0,0,0]],['89319','Villa Hermosa',[0,2,0,0,0,0,0,0]],['87395','Los Ébanos',[0,0,1,0,0,0,1,0]],['89620','Esteros',[0,0,0,2,0,0,0,0]],['89410','Unidad Nacional',[0,0,0,0,0,1,1,0]]],t:[7,8,8,7,3,2,3,3]},
+  '99min|VE':{c:[['94100','Huatusco de Chicuellar Centro',[5,0,0,4,8,4,0,2]],['94510','Los Filtros',[3,4,0,4,2,1,0,0]],['94380','Agrícola Librado Rivera',[2,1,1,2,4,3,0,0]],['94475','San José',[3,0,1,2,3,4,0,0]],['91018','Veracruz',[0,4,3,4,0,0,0,0]],['91090','Emiliano Zapata',[0,0,2,5,2,2,0,0]]],t:[113,86,89,90,92,75,32,52]},
+  '99min|YU':{c:[['97302','Komchén',[3,0,0,2,0,0,1,0]],['97370','Los encinos',[1,0,1,1,2,0,1,0]],['97285','Plan de Ayala Sur ',[0,0,1,1,2,0,1,0]],['97115','AMPLIACION DZODZIL,',[2,2,0,0,0,0,0,0]],['97299','san José tecoh',[1,0,0,1,1,1,0,0]],['97000','Mérida Centro',[0,0,0,2,1,0,0,0]]],t:[15,3,7,12,11,4,4,4]},
+  '99min|ZA':{c:[['98659','La Zacatecana, GUADALUPE, ZA',[0,1,1,0,1,0,0,0]],['99600','SAGRADO CORAZON',[0,0,1,1,0,0,1,0]],['98500','Calera de Víctor Rosales Zacat',[2,0,0,0,0,0,0,0]],['98200','Concepción del Oro',[0,1,0,0,0,1,0,0]],['99257','Emiliano Zapata',[0,1,0,1,0,0,0,0]],['98760','Rancho Nuevo',[0,0,1,1,0,0,0,0]]],t:[9,7,9,3,3,5,2,5]},
+  'DHL|CH':{c:[['31690','El Mirador',[0,0,1,0,1,2,0,3]],['32220','Gustavo Díaz Ordaz',[0,0,0,2,2,1,0,0]],['31183','Campestre las Carolinas',[0,0,0,2,1,1,0,0]],['32230','	Nueva Galeana',[0,0,0,3,0,0,0,0]],['32210','16 de septiembre',[0,0,0,0,0,1,1,1]],['31184',' Riberas de Sacramento',[1,1,0,0,0,0,0,0]]],t:[3,1,2,10,8,10,3,5]},
+  'DHL|CS':{c:[['29120','San Fernando Centro',[1,1,0,8,3,3,0,0]],['29163','El Refugio',[2,1,1,3,5,1,0,2]],['29160','Chiapa de Corzo',[0,0,0,1,2,0,1,0]],['29140','San Bernabé',[0,0,0,0,2,1,1,0]],['29750','Col. San Anastasio',[1,0,0,0,1,1,0,0]],['30700','Tapachula Centro',[2,1,0,0,0,0,0,0]]],t:[10,7,3,16,18,13,5,5]},
+  'DHL|EM':{c:[['56070','Tepetlaoxtoc de Hidalgo',[0,0,0,0,0,0,0,9]],['50783','San Joaquín el Junco',[0,0,1,0,1,1,0,0]],['52957','Club Hípico San Miguel',[2,0,0,0,0,0,0,0]],['54715','Jardines de San Miguel lll',[0,2,0,0,0,0,0,0]],['55965','Jaltepec',[0,0,1,0,0,0,0,1]],['55767','Punta Palermo',[0,0,0,0,1,0,1,0]]],t:[14,7,8,2,10,5,5,11]},
+  'DHL|TM':{c:[['87390','Sección 16',[0,1,1,0,1,0,0,0]],['88440','Col. Ciudad Camargo Centro',[0,0,1,0,0,0,2,0]],['87477','El Provenir',[0,0,0,1,1,1,0,0]],['88794','Ramón Pérez García',[0,0,0,0,3,0,0,0]],['87345','España',[0,1,0,0,0,0,0,1]],['88799','San Francisco',[0,1,0,1,0,0,0,0]]],t:[4,6,8,7,14,5,4,4]},
+  'DHL|VE':{c:[['92030','Cd. Cuauhtemoc',[1,1,0,0,0,1,0,0]],['96499','Ampliación Adolfo López Mateos',[1,0,1,0,1,0,0,0]],['92043','Alto de la Zapupera',[0,0,1,2,0,0,0,0]],['96518','Playa Sol',[1,1,0,0,0,0,0,0]],['92385','El Trébol',[0,2,0,0,0,0,0,0]],['94930','El Pedregal',[0,0,0,2,0,0,0,0]]],t:[10,5,6,9,11,6,6,6]},
+  'Estafeta|AG':{c:[['20199','Municipio Libre',[0,0,0,1,0,0,1,4]],['20264','Morelos INFONAVIT',[0,0,1,2,0,2,0,0]],['20170','Rodolfo Landeros Gallegos',[1,0,0,0,0,0,1,2]],['20210','España',[1,0,0,0,2,0,1,0]],['20298','Morelos',[0,0,0,3,0,0,0,1]],['20218','Los Eucaliptos',[0,0,0,0,0,3,0,1]]],t:[7,7,9,16,5,14,7,13]},
+  'Estafeta|BC':{c:[['22126','3 de Octubre',[3,6,6,6,5,4,0,8]],['22604','Pedregal de Santa Julia',[4,12,2,0,3,1,1,3]],['22000','Zona Centro',[0,0,3,2,10,3,1,4]],['22190','Camino Verde (Cañada Verde)',[0,3,2,3,5,2,1,3]],['22204','Villa Residencial del Bosque',[2,4,4,0,1,5,0,0]],['22206','El Pípila',[2,2,2,3,2,2,0,0]]],t:[50,96,101,87,110,78,46,53]},
+  'Estafeta|BS':{c:[['23477','Chulavista',[1,0,5,4,0,2,0,4]],['23462','Mesa Colorada II',[4,0,1,3,0,0,0,0]],['23473','Los Cangrejos',[2,0,0,1,0,0,3,1]],['23427','Vista Hermosa',[0,1,0,4,0,0,0,1]],['23407','Rosarito',[2,0,0,0,1,0,0,0]],['23600','Zona Centro',[0,0,1,1,0,1,0,0]]],t:[23,4,10,18,7,6,3,9]},
+  'Estafeta|CH':{c:[['32575','Cerradas del Álamo 2',[3,7,3,7,3,3,3,6]],['32590','Zaragoza',[2,0,4,2,3,1,0,0]],['32695','32695',[1,0,2,3,1,1,1,3]],['32690','El Granjero',[2,0,1,2,1,1,1,3]],['32674','Praderas de los Oasis',[1,0,3,2,2,2,0,0]],['32670','División del Norte',[0,0,2,4,1,2,0,1]]],t:[43,23,47,65,56,40,25,33]},
+  'Estafeta|CM':{c:[['24155','Villas de Santa Ana',[3,3,2,2,5,2,4,0]],['24180','Benito Juárez',[0,0,1,3,4,0,2,0]],['24110','1 de Mayo (Playón)',[3,0,0,2,0,0,0,0]],['24158','Reforma',[0,0,1,1,0,1,0,2]],['24170','CUAUHTEMOC',[0,2,1,0,0,0,0,0]],['24114',' Justo Sierra',[0,0,1,1,0,1,0,0]]],t:[8,11,12,13,20,10,10,5]},
+  'Estafeta|CO':{c:[['27277','Campo Nuevo de Zaragoza',[8,1,1,2,2,0,0,1]],['25298','La Aurora',[5,0,0,1,0,1,2,1]],['25000','Saltillo Centro',[1,1,0,1,5,0,0,0]],['25016','Ignacio Zaragoza',[1,1,2,1,0,2,0,1]],['25096','Federico Berrueto Ramón',[0,2,0,4,2,0,0,0]],['25019','nueva imagen',[1,4,0,0,1,1,0,0]]],t:[40,31,24,32,50,42,22,26]},
+  'Estafeta|CS':{c:[['29140','Cruz Blanca',[3,5,0,12,6,1,3,1]],['30700','Tapachula Centro',[3,4,4,3,5,4,3,2]],['30640','Huixtla Centro',[7,3,1,7,1,5,1,2]],['29096','Azteca',[3,1,1,6,1,1,1,3]],['29057','San José Terán',[3,0,1,2,5,2,0,0]],['29045','Comitán',[2,0,0,4,1,2,3,0]]],t:[64,55,36,90,65,62,37,28]},
+  'Estafeta|DF':{c:[['16800','San Mateo Xalpa',[1,0,2,2,4,0,0,0]],['16080','San Esteban',[1,0,0,0,1,3,2,0]],['11320','Anáhuac I Sección',[1,0,1,1,1,0,1,0]],['15400','Romero Rubio',[4,0,0,0,1,0,0,0]],['16200','Santiago Tepalcatlalpan',[2,1,1,0,0,0,0,1]],['15270','Morelos',[0,3,2,0,0,0,0,0]]],t:[30,18,17,25,31,24,17,19]},
+  'Estafeta|DG':{c:[['34167','Fraccionamiento Barcelona',[1,0,1,0,3,0,0,1]],['35029','35029',[1,1,0,1,0,2,0,0]],['34224','Villas de Guadiana VII',[0,0,1,2,0,2,0,0]],['35150','Lerdo Centro',[0,0,2,2,1,0,0,0]],['35025','Fidel Velázquez',[1,0,1,0,1,0,1,0]],['35159','Cerrada San Lorenzo',[0,1,1,1,0,0,0,1]]],t:[18,13,16,20,22,16,13,10]},
+  'Estafeta|EM':{c:[['55067','Ciudad Cuauhtémoc Sección Geo ',[11,3,3,0,2,0,0,0]],['55070','Jardines de Morelos Sección La',[4,0,1,4,3,0,0,3]],['54435','El Trafico',[3,1,4,2,2,0,0,2]],['56337','Tepenepantla',[2,0,2,2,3,0,2,1]],['56343','Villa San Agustín Atlapulco',[0,0,2,2,2,2,0,4]],['55055','Llano de los Báez',[0,1,0,7,1,0,0,2]]],t:[144,76,92,138,128,110,71,96]},
+  'Estafeta|GR':{c:[['39906','Llano Largo',[3,1,2,2,1,0,2,4]],['39890','Granjas del Marqués',[2,0,2,1,1,1,2,5]],['39810','El Coloso INFONAVIT',[0,0,2,0,1,0,3,1]],['39015','Ignacio Manuel Altamirano',[1,1,0,1,1,0,0,1]],['39016','El Huajal',[1,0,1,0,0,1,0,2]],['39070','Paraíso Siglo XXI',[0,0,0,2,1,0,2,0]]],t:[20,12,26,26,30,11,26,30]},
+  'Estafeta|GT':{c:[['36640','Las Eras',[4,1,4,6,0,1,0,0]],['37238','Brisas del vergel',[1,1,0,2,2,1,0,0]],['37669','Brisas del Campestre',[2,0,1,1,0,1,0,1]],['38300','Cortazar Centro',[1,1,0,1,0,2,0,1]],['36810','La Calera',[3,0,1,1,0,0,0,0]],['36821','Lo de Juárez',[2,0,0,0,0,1,1,1]]],t:[38,27,41,49,48,40,20,36]},
+  'Estafeta|HG':{c:[['42186','Paseos de Chavarría',[1,0,1,4,9,2,2,1]],['42855','Noxtongo',[4,0,1,1,2,1,3,1]],['42854','El Carmen',[3,1,0,3,0,1,1,1]],['42083','Juan C. Doria',[0,2,2,2,3,1,0,0]],['42852','Tianguistengo (La Romera)',[1,3,0,1,2,0,0,1]],['42094','Adolfo López Mateos',[1,0,2,1,0,0,0,3]]],t:[30,20,23,27,35,20,17,23]},
+  'Estafeta|JA':{c:[['48290','La Floresta',[6,1,6,6,4,10,4,5]],['45200','Santa Lucia',[6,2,5,6,7,5,0,0]],['45690','Las Pintas',[0,0,2,5,5,2,4,2]],['45589','Las Huertas',[9,1,1,1,3,0,2,0]],['45066','Arenales Tapatíos',[1,3,2,0,4,2,0,0]],['45130','Arcos de Zapopan 2a. Sección',[2,7,1,0,1,1,0,0]]],t:[92,65,67,98,100,66,66,36]},
+  'Estafeta|MI':{c:[['58330','Villas del Pedregal',[2,2,2,2,0,4,4,1]],['61650','Tacambaro de Codallos Centro',[1,1,0,1,0,3,0,0]],['59300','Centro',[0,0,0,1,4,1,0,0]],['59636','Habitacional del Parque',[4,0,1,0,0,0,0,0]],['58337','Camponubes',[0,1,2,0,0,1,1,0]],['58480','Villa Madero Centro',[0,2,0,1,1,0,1,0]]],t:[29,21,18,25,33,29,22,6]},
+  'Estafeta|MO':{c:[['62790','Real del Puente',[0,1,1,3,2,1,1,3]],['62587','Rubén Jaramillo',[0,0,0,2,1,1,0,2]],['62577','Ampliación Bugambilias',[0,0,0,2,0,1,1,0]],['62760','Emiliano Zapata Centro',[0,0,0,1,1,1,0,0]],['62738','Oaxtepec centro',[1,1,0,0,0,0,0,0]],['62778','Acamilpa',[1,0,0,0,0,0,1,0]]],t:[6,2,2,11,16,10,5,9]},
+  'Estafeta|NA':{c:[['63737','Villas Miramar',[1,3,7,1,2,4,1,1]],['63732','Las Brisas',[0,0,2,2,1,1,0,2]],['63734','Cruz de Huanacaxtle',[1,0,0,1,3,1,1,0]],['63735','Las Jarretaderas',[4,2,0,1,0,0,0,0]],['63720','Sierra Linda',[1,0,0,1,1,0,0,2]],['63738','El Porvenir',[0,0,0,1,1,0,0,2]]],t:[14,11,13,12,14,8,4,12]},
+  'Estafeta|NL':{c:[['67256','Valle Santa Isabel',[0,1,5,2,3,1,0,1]],['66646','Pueblo Nuevo',[0,0,0,1,2,3,1,2]],['67267','Vistas del Río',[2,1,2,1,1,0,0,0]],['67350','Independencia',[1,0,0,2,0,2,0,2]],['67280','Valle Sur',[1,0,2,1,2,0,0,0]],['66003','	Valle de San Blas',[0,0,0,2,3,1,0,0]]],t:[34,23,41,52,61,40,23,38]},
+  'Estafeta|OA':{c:[['71222','Forestal',[1,1,2,1,1,0,0,1]],['68370','María Eugenia',[1,0,1,1,0,0,1,1]],['71220','Santa María Atzompa',[0,1,0,3,1,0,0,0]],['71230','Esquipulas Xoxo',[0,1,0,0,4,0,0,0]],['68263','San Lorenzo Cacaotepec',[0,0,0,1,0,0,3,1]],['68276','San Isidro',[1,1,2,0,0,0,0,0]]],t:[18,8,10,21,26,16,12,18]},
+  'Estafeta|PU':{c:[['72499','Santa Lucia',[3,0,0,4,1,3,0,2]],['72595','Patria Nueva',[4,2,2,0,1,1,0,2]],['74160','San Miguel Tianguizolco',[0,0,1,5,0,3,0,1]],['72014','San Pablo Xochimehuacan',[0,0,0,0,5,1,0,2]],['72100','San Jerónimo Caleras',[3,1,1,0,1,1,0,0]],['72490','INFONAVIT Fuentes de San Barto',[1,2,2,1,0,0,0,0]]],t:[36,21,21,33,37,35,12,21]},
+  'Estafeta|QR':{c:[['77516','Villas Otoch',[7,4,4,2,5,1,2,4]],['77539','Hacienda Real del Caribe',[5,4,4,2,5,3,0,3]],['77518','Vista Real',[3,2,2,7,3,2,0,1]],['77723','Villas del Sol II',[3,2,3,2,4,3,2,0]],['77712','Ejidal',[1,5,3,1,2,2,0,0]],['77760','Tulum Centro',[0,4,2,1,3,3,0,0]]],t:[40,38,36,46,45,33,12,27]},
+  'Estafeta|QT':{c:[['76116','Cerrito Colorado',[1,1,0,1,4,0,1,2]],['76148','Paseos del Pedregal',[0,0,1,1,1,0,2,4]],['76246','El Mirador',[0,1,0,1,1,2,2,1]],['76080','Lomas de Casa Blanca',[1,3,0,0,0,0,1,2]],['76118','	Eduardo Loarca Castillo',[0,0,2,0,2,0,0,1]],['76117','LADE RAS DE SAN PEDRO',[2,1,1,0,0,0,0,0]]],t:[25,12,12,13,13,17,16,23]},
+  'Estafeta|SI':{c:[['81110','Juan José Ríos',[0,1,0,0,4,2,0,1]],['80290','Lázaro Cárdenas',[1,0,2,0,2,1,0,0]],['81820','COL CENTRO',[1,0,0,3,0,1,0,0]],['82059','Casa Redonda',[0,0,1,1,2,1,0,0]],['80060','La Campiña',[0,0,0,0,1,0,2,2]],['81285','Raul Romanillo',[1,0,0,1,1,1,0,0]]],t:[11,14,19,28,36,41,11,19]},
+  'Estafeta|SL':{c:[['78438','Los Cactus',[2,0,2,0,3,1,0,3]],['79020','20 de Noviembre',[0,0,0,2,2,1,0,0]],['78423',' ciudad satélite',[1,1,0,0,0,0,1,0]],['78434','El Toro',[1,0,0,1,1,0,0,0]],['79068','La pimienta',[0,0,0,1,0,1,0,1]],['78130','Morelos',[1,0,0,0,0,0,1,0]]],t:[14,12,6,17,11,9,6,9]},
+  'Estafeta|SO':{c:[['83118','Tierra Nueva ',[0,0,1,0,0,2,0,1]],['83177','California',[2,0,1,0,0,0,0,0]],['83296','Nuevo Hermosillo',[0,0,0,0,2,1,0,0]],['83010','Country Club ',[1,0,0,0,1,0,0,0]],['84063','Hermanos Flores Magón',[1,0,0,1,0,0,0,0]],['83120','Progresista',[0,1,0,0,0,1,0,0]]],t:[7,10,9,11,15,13,3,4]},
+  'Estafeta|TB':{c:[['86280','Luis Gil Pérez',[2,1,0,1,3,3,2,1]],['86726','Campo Deportivo',[0,1,0,3,2,2,1,3]],['86270','Santa Isabel',[8,0,1,0,0,0,2,0]],['86288','La Lima',[3,0,0,2,0,0,6,0]],['86200','San Luis',[3,0,0,4,1,1,0,0]],['86250','Macultepec',[3,1,1,1,1,0,1,0]]],t:[47,17,17,31,24,38,27,17]},
+  'Estafeta|TM':{c:[['88799','Valle Soleado',[1,4,3,1,3,2,0,1]],['89602','Los Mangos',[4,0,2,3,1,1,1,3]],['88736','Hacienda del Sol',[3,0,4,1,2,3,0,1]],['88780','Almaguer',[0,0,0,0,1,0,7,0]],['89603','Los prados',[3,0,0,2,1,0,0,1]],['88795','Las Palmas',[0,0,1,2,1,2,0,1]]],t:[31,24,33,45,55,26,23,19]},
+  'Estafeta|VE':{c:[['91697','Tejeira',[1,0,3,2,2,3,1,1]],['91699','Hacienda Sotavento',[1,1,0,7,2,1,0,0]],['91726','Las Bajadas',[1,2,3,3,0,2,0,0]],['91808','Lomas de Río Medio IV',[1,0,0,0,1,4,1,0]],['93650','Tlapacoyan Centro',[1,1,1,0,2,0,1,1]],['93820','Misantla Centro',[1,2,0,3,0,0,0,1]]],t:[47,36,41,54,66,46,31,50]},
+  'Estafeta|YU':{c:[['97314','Ciudad Caucel II',[4,2,2,2,2,3,1,1]],['97370','Ampliación Xelpac',[3,2,1,0,1,2,1,4]],['97350','Centro Hunucmá',[3,10,0,0,0,0,0,0]],['97246','COL XOCLAN',[1,0,0,0,6,0,1,1]],['97297','Emiliano Zapata Sur',[2,1,2,0,1,0,0,2]],['97782','Santa Lucia',[0,1,1,0,0,3,0,3]]],t:[28,33,34,21,33,31,10,37]},
+  'Estafeta|ZA':{c:[['98605','MINA AZUL',[0,0,0,0,2,1,0,1]],['98607','El Salero',[0,0,1,1,0,0,0,1]],['99050','Jesús Gonzáles Ortega',[0,0,0,2,0,1,0,0]],['98606','Escritores',[0,0,0,0,1,2,0,0]],['98330','Miguel Auza Centro',[2,0,0,0,0,0,0,0]],['98500','Calera',[0,1,0,0,1,0,0,0]]],t:[7,2,6,4,9,11,3,7]},
+};
+
 // ══════════════════════════════════════════════════════
 // PIE DE ESTADO — capa de presentación
 //
@@ -296,6 +402,17 @@ const QUEJAS_DATA = (function () {
     });
 
     ['DHL', 'Estafeta', '99min'].forEach(function (c) {
+      if (typeof GEO_MES !== 'undefined' && GEO_MES[c] && typeof RAW !== 'undefined' && RAW[c]) {
+        var gs = 0;
+        Object.keys(GEO_MES[c]).forEach(function (e) {
+          var a = GEO_MES[c][e] || [];
+          if (a.length !== nM) problemas.push(`GEO_MES.${c}.${e} ≠ ${nM} meses`);
+          gs += a.reduce(function (x, y) { return x + y; }, 0);
+        });
+        // la geografía cubre los mismos tickets que los motivos (ND incluido)
+        var gt = RAW[c].tix.reduce(function (x, y) { return x + y; }, 0);
+        if (gs !== gt) problemas.push(`GEO_MES.${c} suma ${gs} vs ${gt} tickets`);
+      }
       if (typeof QUEJAS_MES !== 'undefined' && QUEJAS_MES[c] && typeof QUEJAS_CATS !== 'undefined') {
         var suma = 0;
         QUEJAS_CATS.forEach(function (k) {
