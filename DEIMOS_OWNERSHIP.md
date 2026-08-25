@@ -41,7 +41,8 @@ README.md
 | `DR_DATA` | Delivery Rate % mensual. `null` = mes aún inmaduro |
 | `SEM_WEEKS` / `SEM_LABELS` | Semanas lunes–domingo (ISO) |
 | `SEM_DATA` | `env` / `tix` / `tr` semanal por carrier |
-| `QUEJAS_CATS` / `QUEJAS_MES` | Motivos de queja: catálogo y desglose mensual por carrier (ver §8) |
+| `QUEJAS_CATS` / `QUEJAS_MES` | Motivos de queja: catálogo y desglose mensual por carrier (ver §9) |
+| `GEO_ESTADOS` / `GEO_MES` / `GEO_CP` | Geografía de las quejas: estado y CP (ver §10) |
 
 Todos los arrays de un mismo bloque deben tener **exactamente la misma longitud** que `ALL_MONTHS` (o `SEM_WEEKS`).
 
@@ -102,6 +103,9 @@ en `mensaje`, porque esa línea se muestra en el dashboard.
 | A | `Marca temporal` |
 | H | `Elige la Mensajería` → `DHL` / `Estafeta` / `99 Minutos` |
 | I | `¿Cómo te ayudamos?` (motivo de nivel 1) |
+| J | `Estado registrado en el Shipping address` (código de 2 letras) |
+| M | `CP verificado en SEPOMEX` |
+| N | `Colonia` |
 | O | `¿Qué escenario se presenta?` (detalle) |
 
 La col. **I** es la que alimenta la dona de motivos. Tiene 5 valores vigentes, pero
@@ -326,7 +330,80 @@ sabía cuál era. Hoy:
 
 ---
 
-## 10. Severidad TR/1k
+## 10. Geografía de las quejas
+
+Agregada el 25 ago 2026, dentro de cada panel de carrier de la pestaña de quejas.
+Dos tarjetas: ranking de estados y drill-down al CP del estado seleccionado. Las
+dos respetan el filtro de periodo de la §9.
+
+### De dónde sale
+
+Del mismo formulario, no de Frodo:
+
+| Col. | Campo | Calidad |
+|---|---|---|
+| J | Estado | **Buena.** Códigos de 2 letras ya normalizados: llegan los 32 estados y nada más, sin variantes de texto libre. 86% de cobertura, estable mes a mes. |
+| M | CP verificado en SEPOMEX | Buena, 80% de cobertura. |
+| N | Colonia | Texto libre. Se usa **solo como etiqueta** del CP (la colonia más frecuente dentro de él). |
+
+El 14% sin estado se publica como `ND` → "Sin dato", para que los totales cuadren
+con `RAW.tix`. El validador del pie comprueba justamente eso.
+
+### ⚠️ No hay denominador. Son conteos, no tasas.
+
+Esto es lo más importante de la sección y por eso está escrito en la UI:
+
+- `frodo__deliveries` **no tiene ninguna columna geográfica**.
+- `logistics_information` tiene `delivery_address_state`, pero está **NULL en
+  sus 55M filas**. La columna existe y nunca se pobló. No te ilusiones al verla.
+
+Sin envíos por estado no hay TR/1k por estado. Un estado arriba del ranking puede
+estar ahí solo porque ahí enviamos más tarjetas. **La única lectura de calidad que
+sí es válida es la columna "vs. previo"**, que compara contra los N meses
+inmediatos anteriores del mismo largo.
+
+Si algún día se puebla `delivery_address_state` (o aparece otra fuente de envíos
+por estado que no sea PII de clientes), lo que hay que hacer es sumar un TR/1k por
+estado y reordenar el ranking por ahí. Ese es el upgrade natural.
+
+### Por qué CP y no colonia
+
+Se probó agrupar por colonia y **no funciona**: 10,250 colonias distintas para
+16,373 tickets, mediana de **1 ticket**, y los nombres se repiten entre estados
+("Centro", "Benito Juárez"). La colonia más grande del país son 63 tickets en 8
+meses; la más grande de un carrier en un estado, 7.
+
+El CP sí concentra, porque agrupa varias colonias. El caso que lo dejó claro:
+
+> **CP 54715** (Valle de la Hacienda, Edo. de México) junta **113 tickets de
+> 99minutos** en el año — 6.3% de todo el estado. Partido por colonia, ese mismo
+> CP queda en pedazos de ≤30 y el patrón desaparece.
+
+`GEO_CP` guarda solo pares `carrier|estado` con **≥40 tickets** y de cada uno el
+**top 6** de CPs (61 pares, 366 filas). El resto de la cola no se guarda: son casi
+todos de 1 ticket. `t` es el total mensual de tickets **con CP** del par, para
+poder mostrar qué porcentaje cubre el top 6.
+
+### Al regenerar
+
+```sql
+-- (gviz sobre el Sheet, ver §4 paso 4)
+select month(A), H, J, M, N, count(A)
+where A >= date '2026-01-01' and (H='DHL' or H='Estafeta' or H='99 Minutos')
+group by month(A), H, J, M, N
+```
+
+Corta en `DATA_META.corte` y verifica que `GEO_MES` sume exactamente
+`RAW[carrier].tix` (753 / 9,509 / 8,759 al corte del 22 ago). Si no cuadra, el pie
+del dashboard lo va a gritar.
+
+> El bloque `GEO_CP` son ~19 KB, así que `data.js` pasó de 24 a 48 KB. Sigue
+> siendo editable por el editor web de GitHub, pero ya no es un archivo que quieras
+> retransmitir completo por la API.
+
+---
+
+## 11. Severidad TR/1k
 
 | Color | Rango | CSS |
 |---|---|---|
@@ -340,3 +417,5 @@ Delivery Rate (higher is better): 🟢 ≥ 90 · 🟡 85–90 · 🟠 75–85 ·
 ---
 
 *Actualizado: 25 ago 2026 — datos al 22 ago 2026 (agosto parcial)*
+
+*Última función agregada: geografía de las quejas (§10).*
