@@ -1628,6 +1628,8 @@ function renderSemanalInit() {
   var CARRIERS = ['DHL', 'Estafeta', '99min'];
   var nMes = ALL_MONTHS.length;
   var desde = 0, hasta = nMes - 1;
+  var geoSel = {};   // estado elegido para el drill-down, por carrier
+  var geoTodos = {}; // si la lista de estados está expandida, por carrier
 
   function limpio(i) { return String(ALL_MONTHS[i]).replace('*', '').trim(); }
   function esParcial(i) { return String(ALL_MONTHS[i]).indexOf('*') !== -1; }
@@ -1671,7 +1673,29 @@ function renderSemanalInit() {
       'border:1px solid rgba(138,143,152,.35);background:transparent;color:inherit;cursor:pointer}',
       '.qf-sep{width:1px;height:20px;background:rgba(138,143,152,.28);margin:0 4px}',
       '.qf-info{font-size:11.5px;color:#8A8F98;margin-left:auto}',
-      '.qf-aviso{font-size:11.5px;color:#C77700;margin-left:auto}'
+      '.qf-aviso{font-size:11.5px;color:#C77700;margin-left:auto}',
+      '.geo-tabla{width:100%;border-collapse:collapse;font-size:12px}',
+      '.geo-tabla th{text-align:left;font-size:10px;text-transform:uppercase;',
+      'letter-spacing:.4px;color:#8A8F98;font-weight:600;padding:4px 6px;',
+      'border-bottom:1px solid rgba(138,143,152,.2)}',
+      '.geo-tabla th.num,.geo-tabla td.num{text-align:right}',
+      '.geo-tabla td{padding:5px 6px;border-bottom:1px solid rgba(138,143,152,.09)}',
+      '.geo-tabla tbody tr.clic{cursor:pointer}',
+      '.geo-tabla tbody tr.clic:hover{background:rgba(138,143,152,.10)}',
+      '.geo-tabla tbody tr.sel{background:rgba(123,82,184,.14)}',
+      '.geo-tabla tbody tr.sel td:first-child{font-weight:600}',
+      '.geo-bar{display:block;height:3px;border-radius:2px;background:#7B52B8;margin-top:4px;min-width:1px}',
+      '.geo-nd{color:#8A8F98;font-style:italic}',
+      '.geo-up{color:#C7443B;font-weight:600}',
+      '.geo-down{color:#1F9D6B;font-weight:600}',
+      '.geo-flat{color:#8A8F98}',
+      '.geo-mas{margin-top:9px;font-size:11.5px;background:none;border:0;color:#7B52B8;',
+      'cursor:pointer;padding:0;font:inherit;font-size:11.5px}',
+      '.geo-mas:hover{text-decoration:underline}',
+      '.geo-vacio{font-size:12px;color:#8A8F98;padding:12px 0;line-height:1.5}',
+      '.geo-nota{font-size:10.5px;color:#8A8F98;margin-top:10px;line-height:1.5}',
+      '.geo-cp-cp{font-variant-numeric:tabular-nums;font-weight:600}',
+      '.geo-cp-col{color:#8A8F98;font-size:11px}'
     ].join('');
     document.head.appendChild(st);
   }
@@ -1840,6 +1864,178 @@ function renderSemanalInit() {
     if (sub) sub.textContent = '% del total de tickets · ' + rangoTexto() + ' 2026';
   }
 
+  // ── Geografía: de qué estado vienen, y drill-down a CP ───────────────
+  // Son conteos, no tasas: no hay denominario de envíos por estado en ninguna
+  // fuente (ver el encabezado de GEO_MES en data.js). Lo único que sí se puede
+  // leer como señal de calidad es el cambio contra el periodo anterior.
+  function hayGeo() {
+    return typeof GEO_MES !== 'undefined' && typeof GEO_ESTADOS !== 'undefined';
+  }
+
+  function rangoPrevio() {
+    var largo = hasta - desde + 1;
+    if (desde - largo < 0) return null;
+    return [desde - largo, desde - 1];
+  }
+
+  function sumaRango(arr, a, b) {
+    var t = 0;
+    for (var i = a; i <= b; i++) t += (arr && arr[i]) || 0;
+    return t;
+  }
+
+  function geoDatos(carrier) {
+    var m = GEO_MES[carrier] || {};
+    var prev = rangoPrevio();
+    var filas = Object.keys(m).map(function (e) {
+      return {
+        code: e,
+        nombre: GEO_ESTADOS[e] || e,
+        nd: e === 'ND',
+        tix: sumaRango(m[e], desde, hasta),
+        ant: prev ? sumaRango(m[e], prev[0], prev[1]) : null
+      };
+    }).filter(function (f) { return f.tix > 0; });
+    var total = filas.reduce(function (a, f) { return a + f.tix; }, 0);
+    var maxTix = filas.reduce(function (a, f) { return Math.max(a, f.tix); }, 0);
+    filas.sort(function (a, b) { return b.tix - a.tix; });
+    filas.forEach(function (f) {
+      f.pct = total ? f.tix / total * 100 : 0;
+      f.rel = maxTix ? f.tix / maxTix * 100 : 0;
+      f.delta = (f.ant === null || f.ant === 0) ? null : (f.tix - f.ant) / f.ant * 100;
+    });
+    return { filas: filas, total: total, hayPrev: !!prev };
+  }
+
+  function cpDatos(carrier, est) {
+    var g = (typeof GEO_CP !== 'undefined') && GEO_CP[carrier + '|' + est];
+    if (!g) return null;
+    var filas = g.c.map(function (r) {
+      return { cp: r[0], col: r[1], tix: sumaRango(r[2], desde, hasta) };
+    }).filter(function (f) { return f.tix > 0; });
+    var conCp = sumaRango(g.t, desde, hasta);
+    filas.sort(function (a, b) { return b.tix - a.tix; });
+    filas.forEach(function (f) { f.pct = conCp ? f.tix / conCp * 100 : 0; });
+    return { filas: filas, conCp: conCp };
+  }
+
+  function pintaDelta(f, hayPrev) {
+    if (!hayPrev) return '<span class="geo-flat">—</span>';
+    if (f.ant === 0) return '<span class="geo-up">nuevo</span>';
+    if (f.delta === null) return '<span class="geo-flat">—</span>';
+    var r = Math.round(f.delta);
+    if (r === 0) return '<span class="geo-flat">=</span>';
+    var cls = r > 0 ? 'geo-up' : 'geo-down';
+    return '<span class="' + cls + '">' + (r > 0 ? '+' : '') + r + '%</span>';
+  }
+
+  // Construye el markup del bloque una sola vez por panel.
+  function construirGeo(carrier) {
+    var pane = document.getElementById('quejas-' + carrier);
+    if (!pane || document.getElementById('geoWrap-' + carrier)) return;
+    var wrap = document.createElement('div');
+    wrap.className = 'grid2';
+    wrap.id = 'geoWrap-' + carrier;
+    wrap.innerHTML =
+      '<div class="card"><div class="card-title">De qué estado vienen — ' + carrier + '</div>' +
+      '<div class="card-sub" id="geoSub-' + carrier + '"></div>' +
+      '<div id="geoLista-' + carrier + '"></div></div>' +
+      '<div class="card"><div class="card-title" id="geoCpTit-' + carrier + '">Concentración por CP</div>' +
+      '<div class="card-sub" id="geoCpSub-' + carrier + '"></div>' +
+      '<div id="geoCp-' + carrier + '"></div></div>';
+    pane.appendChild(wrap);
+    document.getElementById('geoLista-' + carrier).addEventListener('click', function (ev) {
+      var tr = ev.target.closest ? ev.target.closest('tr[data-e]') : null;
+      if (tr) { geoSel[carrier] = tr.getAttribute('data-e'); pintarGeo(carrier); return; }
+      var b = ev.target.closest ? ev.target.closest('.geo-mas') : null;
+      if (b) { geoTodos[carrier] = !geoTodos[carrier]; pintarGeo(carrier); }
+    });
+  }
+
+  function pintarGeo(carrier) {
+    if (!hayGeo() || !GEO_MES[carrier]) return;
+    construirGeo(carrier);
+    var g = geoDatos(carrier);
+    var TOPE = 12;
+    var todos = !!geoTodos[carrier];
+    var vis = todos ? g.filas : g.filas.slice(0, TOPE);
+
+    var sub = document.getElementById('geoSub-' + carrier);
+    if (sub) sub.textContent = 'Tickets por estado · ' + rangoTexto() + ' 2026 · conteos, no tasas';
+
+    var html = '<table class="geo-tabla"><thead><tr><th>Estado</th>' +
+      '<th class="num">Tickets</th><th class="num">%</th><th class="num">vs. previo</th>' +
+      '</tr></thead><tbody>';
+    vis.forEach(function (f) {
+      var drill = !f.nd && typeof GEO_CP !== 'undefined' && GEO_CP[carrier + '|' + f.code];
+      var sel = geoSel[carrier] === f.code;
+      html += '<tr' + (drill ? ' class="clic' + (sel ? ' sel' : '') + '" data-e="' + f.code + '"' : '') + '>' +
+        '<td' + (f.nd ? ' class="geo-nd"' : '') + '>' + f.nombre +
+        '<span class="geo-bar" style="width:' + f.rel.toFixed(1) + '%"></span></td>' +
+        '<td class="num">' + fmt(f.tix) + '</td>' +
+        '<td class="num">' + f.pct.toFixed(1) + '%</td>' +
+        '<td class="num">' + pintaDelta(f, g.hayPrev) + '</td></tr>';
+    });
+    html += '</tbody></table>';
+    if (g.filas.length > TOPE) {
+      html += '<button class="geo-mas">' + (todos
+        ? 'Ver solo el top ' + TOPE
+        : 'Ver los ' + (g.filas.length - TOPE) + ' estados restantes') + '</button>';
+    }
+    html += '<div class="geo-nota">Son conteos de tickets, no una tasa: no existe' +
+      ' denominador de envíos por estado, así que un estado alto puede estarlo' +
+      ' solo porque ahí se envía más. La columna <em>vs. previo</em> compara' +
+      ' contra los ' + (hasta - desde + 1) + ' meses inmediatos anteriores y sí' +
+      ' es comparable.' + (g.hayPrev ? '' : ' No hay periodo previo suficiente para' +
+      ' este rango.') + '</div>';
+    document.getElementById('geoLista-' + carrier).innerHTML = html;
+
+    // ── panel derecho: CPs del estado elegido ──
+    var elegible = g.filas.filter(function (f) {
+      return !f.nd && typeof GEO_CP !== 'undefined' && GEO_CP[carrier + '|' + f.code];
+    });
+    if (!geoSel[carrier] || !GEO_CP[carrier + '|' + geoSel[carrier]]) {
+      geoSel[carrier] = elegible.length ? elegible[0].code : null;
+    }
+    var est = geoSel[carrier];
+    var tit = document.getElementById('geoCpTit-' + carrier);
+    var cpSub = document.getElementById('geoCpSub-' + carrier);
+    var cont = document.getElementById('geoCp-' + carrier);
+    if (!est) {
+      if (tit) tit.textContent = 'Concentración por CP';
+      if (cpSub) cpSub.textContent = '';
+      cont.innerHTML = '<div class="geo-vacio">Ningún estado de ' + carrier +
+        ' junta los 40 tickets mínimos para desglosar por CP en este periodo.</div>';
+      return;
+    }
+    var c = cpDatos(carrier, est);
+    if (tit) tit.textContent = 'Concentración por CP — ' + (GEO_ESTADOS[est] || est);
+    if (cpSub) cpSub.textContent = 'Top 6 códigos postales · ' + rangoTexto() + ' 2026';
+    if (!c || !c.filas.length) {
+      cont.innerHTML = '<div class="geo-vacio">Sin tickets con CP capturado en' +
+        ' este periodo para ' + (GEO_ESTADOS[est] || est) + '.</div>';
+      return;
+    }
+    var cubre = c.filas.reduce(function (a, f) { return a + f.tix; }, 0);
+    var maxCp = c.filas[0].tix;
+    var h2 = '<table class="geo-tabla"><thead><tr><th>CP y colonia</th>' +
+      '<th class="num">Tickets</th><th class="num">% del edo.</th></tr></thead><tbody>';
+    c.filas.forEach(function (f) {
+      h2 += '<tr><td><span class="geo-cp-cp">' + f.cp + '</span> ' +
+        '<span class="geo-cp-col">' + f.col + '</span>' +
+        '<span class="geo-bar" style="width:' + (f.tix / maxCp * 100).toFixed(1) + '%"></span></td>' +
+        '<td class="num">' + fmt(f.tix) + '</td>' +
+        '<td class="num">' + f.pct.toFixed(1) + '%</td></tr>';
+    });
+    h2 += '</tbody></table>';
+    h2 += '<div class="geo-nota">Estos ' + c.filas.length + ' CPs concentran ' +
+      fmt(cubre) + ' de los ' + fmt(c.conCp) + ' tickets con CP capturado del' +
+      ' estado (' + (c.conCp ? (cubre / c.conCp * 100).toFixed(1) : '0') + '%).' +
+      ' La colonia es la más frecuente dentro del CP, solo como referencia:' +
+      ' un CP agrupa varias. Clic en otro estado de la izquierda para cambiar.</div>';
+    cont.innerHTML = h2;
+  }
+
   function render() {
     var totalGlobal = 0;
     CARRIERS.forEach(function (c) {
@@ -1849,6 +2045,8 @@ function renderSemanalInit() {
       pintarKpis(c, d);
       pintarTabla(c, d);
       pintarDona(c, d);
+      // la geografía es aditiva: si truena, no debe tumbar el resto de la pestaña
+      try { pintarGeo(c); } catch (e) { if (window.console) console.warn('geo:', e); }
     });
 
     var p = document.querySelector('#quejas .page-header p');
