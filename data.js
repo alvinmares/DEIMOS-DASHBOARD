@@ -38,6 +38,7 @@ const DATA_META = {
     'DR de mayo bajó un pelo (DHL 85.02→84.89, Estafeta 91.97→91.87) con envíos idénticos: reclasificación de status en Frodo, no volumen. DHL sigue en su banda normal de 84–87%.',
     'Envíos y tickets históricos ene–jul verificados contra lo publicado: cero drift.',
     'Tickets cortados al 22 ago para alinear con envíos; los 52 del 23–25 ago entran el próximo ciclo.',
+    'Pestaña de quejas reconstruida: taxonomía vigente del form (5 motivos) con desglose mensual y filtro de periodo. Los totales cuadran con RAW.tix. Cierra los pendientes de la §8 de la guía.',
     'Vista diaria: ene–abr viene de cargas por lote (17 días hábiles en 0 y picos de hasta 13x); la granularidad diaria solo es confiable de mayo en adelante.',
   ],
 };
@@ -194,15 +195,53 @@ const DIA_DATA = {
   },
 };
 
-// ⚠️ Taxonomía heredada del form anterior — no reproducible con el form actual. Pendiente redefinir.
-const QUEJAS_DATA={
-  'DHL':{labels:['Falsa entrega','Prob. repartidor','Cambio carrier','Devolución sin intentos','Sin cobertura','No completó entrega','Múltiples intentos','Entrega cruzada','Punto forzado','Otros'],
-    data:[518,41,20,18,9,7,7,6,4,8],colors:['#F06292','#7B52B8','#90A4AE','#F4A020','#26C6A0','#60A5FA','#E040A0','#BDBDBD','#FF8A65','#9E9E9E']},
-  'Estafeta':{labels:['Falsa entrega','Entrega cruzada','Prob. repartidor','Cambio carrier','Problema interno','Devolución sin intentos','Nombre incorrecto','Punto forzado','Sobre abierto','Otros'],
-    data:[6408,1183,247,105,63,61,33,22,10,24],colors:['#F06292','#F4A020','#7B52B8','#90A4AE','#9E9E9E','#60A5FA','#E040A0','#FF8A65','#26C6A0','#BDBDBD']},
-  '99min':{labels:['Falsa entrega','Prob. repartidor','Entrega cruzada','Cambio carrier','Devolución sin intentos','Problema interno','No completó entrega','Punto forzado','Sobre abierto','No contestan','Otros'],
-    data:[7079,294,166,84,58,38,18,16,14,13,26],colors:['#F06292','#7B52B8','#F4A020','#90A4AE','#60A5FA','#9E9E9E','#26C6A0','#FF8A65','#E040A0','#BDBDBD','#CFD8DC']}
+// ── Motivos de queja ──────────────────────────────────────────────────
+// Taxonomía vigente del formulario (col. I, "¿Cómo te ayudamos?"), con las
+// dos variantes de "Cambio de carrier" fundidas en una: el form traía el
+// texto mal escrito ("Solosi") hasta el 8 ago 2026.
+//
+// A diferencia del QUEJAS_DATA anterior —totales fijos, con una taxonomía
+// que ya no existía en el form— esto es un desglose mensual alineado a
+// ALL_MONTHS, así que la pestaña se puede filtrar por periodo y los números
+// se reproducen con una query. Los totales por mes cuadran exactamente con
+// RAW[carrier].tix, que es la autovalidación al cargar.
+//
+// Query (Google Visualization API sobre el Sheet del form, ver guía §4):
+//   select month(A), day(A), H, I, count(A)
+//   where A >= date '2026-01-01' and (H='DHL' or H='Estafeta' or H='99 Minutos')
+//   group by month(A), day(A), H, I
+// Se corta en DATA_META.corte para alinear con los envíos.
+const QUEJAS_CATS = [
+  { key:'falsa',      label:'Falsa entrega',               color:'#F06292' },
+  { key:'cruzada',    label:'Entregas cruzadas',           color:'#F4A020' },
+  { key:'mensajeria', label:'Problemas con la mensajería', color:'#7B52B8' },
+  { key:'cambio',     label:'Cambio de carrier',           color:'#90A4AE' },
+  { key:'internos',   label:'Problemas internos',          color:'#26C6A0' },
+];
+
+const QUEJAS_MES = {
+  'DHL':       { falsa:[96,56,55,94,114,82,50,73], cruzada:[0,1,0,3,0,1,1,2], mensajeria:[37,8,11,6,9,10,7,9], cambio:[0,0,0,5,11,3,2,0], internos:[2,3,2,0,0,0,0,0] },
+  'Estafeta':  { falsa:[1063,787,873,1184,1208,975,632,786], cruzada:[192,150,171,402,117,114,134,98], mensajeria:[87,54,38,70,53,33,65,28], cambio:[0,0,1,5,75,19,7,12], internos:[21,14,14,8,11,3,5,0] },
+  '99min':     { falsa:[1398,1029,1112,1542,1052,751,407,674], cruzada:[60,26,18,18,24,7,23,9], mensajeria:[64,46,61,48,130,55,43,25], cambio:[0,0,0,5,68,10,3,3], internos:[11,13,9,4,3,5,3,0] },
 };
+
+// Compatibilidad: la forma vieja {labels,data,colors} derivada del acumulado
+// del año. Nada nuevo la usa —el filtro lee QUEJAS_MES— pero evita que una
+// llamada heredada a buildQuejasChart truene.
+const QUEJAS_DATA = (function () {
+  var o = {};
+  Object.keys(QUEJAS_MES).forEach(function (car) {
+    var filas = QUEJAS_CATS.map(function (c) {
+      return { c: c, n: QUEJAS_MES[car][c.key].reduce(function (a, b) { return a + b; }, 0) };
+    }).filter(function (f) { return f.n > 0; }).sort(function (a, b) { return b.n - a.n; });
+    o[car] = {
+      labels: filas.map(function (f) { return f.c.label; }),
+      data:   filas.map(function (f) { return f.n; }),
+      colors: filas.map(function (f) { return f.c.color; }),
+    };
+  });
+  return o;
+})();
 
 // ══════════════════════════════════════════════════════
 // PIE DE ESTADO — capa de presentación
@@ -253,6 +292,22 @@ const QUEJAS_DATA={
         ['env', 'tix', 'tr'].forEach(function (k) {
           if (SEM_DATA[c][k].length !== nS) problemas.push(`SEM_DATA.${c}.${k} ≠ ${nS} semanas`);
         });
+      }
+    });
+
+    ['DHL', 'Estafeta', '99min'].forEach(function (c) {
+      if (typeof QUEJAS_MES !== 'undefined' && QUEJAS_MES[c] && typeof QUEJAS_CATS !== 'undefined') {
+        var suma = 0;
+        QUEJAS_CATS.forEach(function (k) {
+          var a = QUEJAS_MES[c][k.key] || [];
+          if (a.length !== nM) problemas.push(`QUEJAS_MES.${c}.${k.key} ≠ ${nM} meses`);
+          suma += a.reduce(function (x, y) { return x + y; }, 0);
+        });
+        // los motivos deben sumar exactamente los tickets publicados
+        if (typeof RAW !== 'undefined' && RAW[c]) {
+          var tix = RAW[c].tix.reduce(function (x, y) { return x + y; }, 0);
+          if (suma !== tix) problemas.push(`QUEJAS_MES.${c} suma ${suma} vs ${tix} tickets`);
+        }
       }
     });
 
