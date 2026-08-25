@@ -1982,12 +1982,18 @@ function renderSemanalInit() {
         ? 'Ver solo el top ' + TOPE
         : 'Ver los ' + (g.filas.length - TOPE) + ' estados restantes') + '</button>';
     }
+    var largoR = hasta - desde + 1;
     html += '<div class="geo-nota">Son conteos de tickets, no una tasa: no existe' +
       ' denominador de envíos por estado, así que un estado alto puede estarlo' +
-      ' solo porque ahí se envía más. La columna <em>vs. previo</em> compara' +
-      ' contra los ' + (hasta - desde + 1) + ' meses inmediatos anteriores y sí' +
-      ' es comparable.' + (g.hayPrev ? '' : ' No hay periodo previo suficiente para' +
-      ' este rango.') + '</div>';
+      ' solo porque ahí se envía más. ' + (g.hayPrev
+        ? 'La columna <em>vs. previo</em> compara contra ' + (largoR === 1
+            ? 'el mes inmediato anterior'
+            : 'los ' + largoR + ' meses inmediatos anteriores') + ', y esa sí es' +
+          ' una lectura válida de si algo empeora.'
+        : 'La columna <em>vs. previo</em> queda vacía: no hay ' + (largoR === 1
+            ? 'un mes anterior'
+            : largoR + ' meses anteriores') + ' dentro de 2026 con los que' +
+          ' comparar este rango.') + '</div>';
     document.getElementById('geoLista-' + carrier).innerHTML = html;
 
     // ── panel derecho: CPs del estado elegido ──
