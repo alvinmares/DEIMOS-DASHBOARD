@@ -1609,5 +1609,293 @@ function renderSemanalInit() {
     function renderDiariaInit() { renderDiaria(); }
 
 </script>
+<script>
+// ══════════════════════════════════════════════════════
+// FILTRO DE PERIODO — pestaña "¿De qué se quejan?"
+//
+// Reconstruye la pestaña desde QUEJAS_MES (desglose mensual por carrier y
+// motivo, con la taxonomía vigente del formulario) en vez de los totales
+// fijos de la versión anterior. Cierra los dos pendientes de la §8 de la
+// guía: la taxonomía muerta y la ventana de la dona sin definir.
+//
+// Sobrescribe al renderizar el markup hardcodeado de los 3 paneles, así que
+// no hace falta borrarlo. Si QUEJAS_MES no existe (data.js viejo) el módulo
+// se desactiva solo y la pestaña se comporta como antes.
+// ══════════════════════════════════════════════════════
+(function () {
+  if (typeof QUEJAS_MES === 'undefined' || typeof QUEJAS_CATS === 'undefined') return;
+
+  var CARRIERS = ['DHL', 'Estafeta', '99min'];
+  var nMes = ALL_MONTHS.length;
+  var desde = 0, hasta = nMes - 1;
+
+  function limpio(i) { return String(ALL_MONTHS[i]).replace('*', '').trim(); }
+  function esParcial(i) { return String(ALL_MONTHS[i]).indexOf('*') !== -1; }
+  // 'Ago 26*' -> 'ago': el año lo pone quien arma la leyenda, para no repetirlo
+  function mesCorto(i) { return limpio(i).replace(/\s*\d{2}$/, '').toLowerCase(); }
+
+  function rangoTexto() {
+    return desde === hasta ? mesCorto(desde) : mesCorto(desde) + ' – ' + mesCorto(hasta);
+  }
+
+  function suma(carrier, cat) {
+    var a = QUEJAS_MES[carrier][cat] || [], t = 0;
+    for (var i = desde; i <= hasta; i++) t += a[i] || 0;
+    return t;
+  }
+
+  function sumaEnv(carrier) {
+    var a = (RAW[carrier] || {}).env || [], t = 0;
+    for (var i = desde; i <= hasta; i++) t += a[i] || 0;
+    return t;
+  }
+
+  function fmt(n) { return Number(n).toLocaleString('es-MX'); }
+
+  function inyectarEstilos() {
+    if (document.getElementById('qfEstilos')) return;
+    var st = document.createElement('style');
+    st.id = 'qfEstilos';
+    st.textContent = [
+      '.quejas-filtro{display:flex;align-items:center;flex-wrap:wrap;gap:8px;',
+      'margin:0 0 18px;padding:12px 14px;border:1px solid rgba(138,143,152,.22);',
+      'border-radius:10px;background:rgba(138,143,152,.06)}',
+      '.qf-lbl{font-size:11px;font-weight:600;letter-spacing:.4px;',
+      'text-transform:uppercase;color:#8A8F98}',
+      '.qf-preset{font:inherit;font-size:12px;padding:5px 11px;border-radius:999px;',
+      'border:1px solid rgba(138,143,152,.35);background:transparent;color:inherit;',
+      'cursor:pointer;transition:background .12s,border-color .12s}',
+      '.qf-preset:hover{background:rgba(138,143,152,.14)}',
+      '.qf-preset.active{background:#7B52B8;border-color:#7B52B8;color:#fff;font-weight:600}',
+      '.qf-sel{font:inherit;font-size:12px;padding:5px 8px;border-radius:7px;',
+      'border:1px solid rgba(138,143,152,.35);background:transparent;color:inherit;cursor:pointer}',
+      '.qf-sep{width:1px;height:20px;background:rgba(138,143,152,.28);margin:0 4px}',
+      '.qf-info{font-size:11.5px;color:#8A8F98;margin-left:auto}',
+      '.qf-aviso{font-size:11.5px;color:#C77700;margin-left:auto}'
+    ].join('');
+    document.head.appendChild(st);
+  }
+
+  function construirBarra() {
+    var sec = document.getElementById('quejas');
+    if (!sec || document.getElementById('quejasFiltro')) return;
+
+    var barra = document.createElement('div');
+    barra.className = 'quejas-filtro';
+    barra.id = 'quejasFiltro';
+
+    var opciones = '';
+    for (var i = 0; i < nMes; i++) opciones += '<option value="' + i + '">' + limpio(i) + '</option>';
+
+    barra.innerHTML =
+      '<span class="qf-lbl">Periodo</span>' +
+      '<button class="qf-preset" data-p="ytd">2026 YTD</button>' +
+      '<button class="qf-preset" data-p="3m">Últimos 3 meses</button>' +
+      '<button class="qf-preset" data-p="mes">Mes actual</button>' +
+      '<span class="qf-sep"></span>' +
+      '<span class="qf-lbl">De</span>' +
+      '<select class="qf-sel" id="qfDesde">' + opciones + '</select>' +
+      '<span class="qf-lbl">a</span>' +
+      '<select class="qf-sel" id="qfHasta">' + opciones + '</select>' +
+      '<span class="qf-info" id="qfInfo"></span>';
+
+    // va después de la nota metodológica, antes de los tabs de carrier
+    var nota = sec.querySelector('.info-box');
+    if (nota && nota.nextSibling) sec.insertBefore(barra, nota.nextSibling);
+    else sec.insertBefore(barra, sec.children[2] || null);
+
+    barra.addEventListener('click', function (e) {
+      var b = e.target.closest ? e.target.closest('.qf-preset') : null;
+      if (!b) return;
+      var p = b.getAttribute('data-p');
+      if (p === 'ytd') { desde = 0; hasta = nMes - 1; }
+      else if (p === '3m') { desde = Math.max(0, nMes - 3); hasta = nMes - 1; }
+      else { desde = hasta = nMes - 1; }
+      sincronizar();
+      render();
+    });
+
+    function onSel() {
+      desde = +document.getElementById('qfDesde').value;
+      hasta = +document.getElementById('qfHasta').value;
+      if (desde > hasta) { var t = desde; desde = hasta; hasta = t; sincronizar(); }
+      render();
+    }
+    document.getElementById('qfDesde').addEventListener('change', onSel);
+    document.getElementById('qfHasta').addEventListener('change', onSel);
+    sincronizar();
+  }
+
+  function sincronizar() {
+    var d = document.getElementById('qfDesde'), h = document.getElementById('qfHasta');
+    if (d) d.value = desde;
+    if (h) h.value = hasta;
+    var activo = (desde === 0 && hasta === nMes - 1) ? 'ytd'
+      : (desde === Math.max(0, nMes - 3) && hasta === nMes - 1) ? '3m'
+        : (desde === nMes - 1 && hasta === nMes - 1) ? 'mes' : null;
+    var bs = document.querySelectorAll('#quejasFiltro .qf-preset');
+    for (var i = 0; i < bs.length; i++) {
+      bs[i].classList.toggle('active', bs[i].getAttribute('data-p') === activo);
+    }
+  }
+
+  function datos(carrier) {
+    var filas = QUEJAS_CATS.map(function (c) {
+      return { key: c.key, label: c.label, color: c.color, tix: suma(carrier, c.key) };
+    }).filter(function (f) { return f.tix > 0; });
+    var total = filas.reduce(function (a, f) { return a + f.tix; }, 0);
+    filas.sort(function (a, b) { return b.tix - a.tix; });
+    filas.forEach(function (f) { f.pct = total ? f.tix / total * 100 : 0; });
+    return { filas: filas, total: total };
+  }
+
+  function pintarKpis(carrier, d) {
+    var pane = document.getElementById('quejas-' + carrier);
+    if (!pane) return;
+    var grid = pane.querySelector('.kpi-grid');
+    if (!grid) return;
+    var env = sumaEnv(carrier);
+    var tr = env ? (d.total / env * 1000) : 0;
+    var html = '';
+    d.filas.slice(0, 3).forEach(function (f) {
+      html += '<div class="kpi"><div class="kpi-accent" style="background:' + f.color + '"></div>' +
+        '<div class="kpi-val">' + f.pct.toFixed(1) + '%</div>' +
+        '<div class="kpi-lbl">' + f.label + '</div>' +
+        '<div class="kpi-note">' + fmt(f.tix) + ' tix' +
+        (f.key === 'falsa' ? ' · sin texto libre' : '') + '</div></div>';
+    });
+    for (var i = d.filas.length; i < 3; i++) {
+      html += '<div class="kpi"><div class="kpi-accent"></div><div class="kpi-val">—</div>' +
+        '<div class="kpi-lbl">Sin registros</div><div class="kpi-note">0 tix</div></div>';
+    }
+    html += '<div class="kpi"><div class="kpi-accent"></div>' +
+      '<div class="kpi-val">' + fmt(d.total) + '</div>' +
+      '<div class="kpi-lbl">Total ' + carrier + ' · ' + rangoTexto() + '</div>' +
+      '<div class="kpi-note">TR/1k prom: ' + tr.toFixed(2) + '</div></div>';
+    grid.innerHTML = html;
+  }
+
+  function pintarTabla(carrier, d) {
+    var pane = document.getElementById('quejas-' + carrier);
+    if (!pane) return;
+    var tbl = pane.querySelector('table');
+    if (!tbl) return;
+    var tb = tbl.querySelector('tbody') || tbl;
+    var html = '';
+    d.filas.forEach(function (f) {
+      html += '<tr><td><span class="dot" style="background:' + f.color + '"></span>' +
+        f.label + '</td><td>' + fmt(f.tix) + '</td><td>' + f.pct.toFixed(1) + '%</td></tr>';
+    });
+    if (!d.filas.length) {
+      html = '<tr><td colspan="3">Sin tickets en el periodo seleccionado.</td></tr>';
+    } else {
+      html += '<tr><td><strong>Total</strong></td><td><strong>' + fmt(d.total) +
+        '</strong></td><td><strong>100.0%</strong></td></tr>';
+    }
+    tb.innerHTML = html;
+
+    var card = tbl.closest ? tbl.closest('.card') : null;
+    var sub = card && card.querySelector('.card-sub');
+    if (sub) sub.textContent = 'Taxonomía vigente del formulario · ' + rangoTexto() + ' 2026';
+  }
+
+  function pintarDona(carrier, d) {
+    var id = 'chartQuejas' + carrier;
+    var cv = document.getElementById(id);
+    if (!cv || typeof Chart === 'undefined') return;
+    if (typeof charts !== 'undefined' && charts[id]) {
+      try { charts[id].destroy(); } catch (e) { /* ignorar */ }
+      delete charts[id];
+    }
+    var g = new Chart(cv, {
+      type: 'doughnut',
+      data: {
+        labels: d.filas.map(function (f) { return f.label; }),
+        datasets: [{
+          data: d.filas.map(function (f) { return f.tix; }),
+          backgroundColor: d.filas.map(function (f) { return f.color; }),
+          borderWidth: 0
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false, cutout: '58%',
+        plugins: {
+          legend: { position: 'bottom', labels: { font: { size: 11 }, boxWidth: 10, padding: 10 } },
+          tooltip: {
+            callbacks: {
+              label: function (ctx) {
+                var t = d.total || 1;
+                return ' ' + ctx.label + ': ' + fmt(ctx.parsed) +
+                  ' (' + (ctx.parsed / t * 100).toFixed(1) + '%)';
+              }
+            }
+          }
+        }
+      }
+    });
+    if (typeof charts !== 'undefined') charts[id] = g;
+
+    var card = cv.closest ? cv.closest('.card') : null;
+    var sub = card && card.querySelector('.card-sub');
+    if (sub) sub.textContent = '% del total de tickets · ' + rangoTexto() + ' 2026';
+  }
+
+  function render() {
+    var totalGlobal = 0;
+    CARRIERS.forEach(function (c) {
+      if (!QUEJAS_MES[c]) return;
+      var d = datos(c);
+      totalGlobal += d.total;
+      pintarKpis(c, d);
+      pintarTabla(c, d);
+      pintarDona(c, d);
+    });
+
+    var p = document.querySelector('#quejas .page-header p');
+    if (p) p.textContent = 'Clasificación de motivos · ' + rangoTexto() +
+      ' 2026 · todos los carriers';
+
+    var info = document.getElementById('qfInfo');
+    if (info) {
+      var parcial = esParcial(hasta);
+      info.className = parcial ? 'qf-aviso' : 'qf-info';
+      info.textContent = fmt(totalGlobal) + ' tickets en el periodo' +
+        (parcial ? ' · ' + limpio(hasta) + ' es mes parcial (al ' +
+          (DATA_META.etiqueta || 'corte') + ')' : '');
+    }
+  }
+
+  // expuesta para poder re-renderizar desde consola
+  window.renderQuejas = render;
+
+  // se engancha envolviendo renderPage, sin tocar su código original
+  if (typeof renderPage === 'function') {
+    var orig = renderPage;
+    window.renderPage = function () {
+      var r = orig.apply(this, arguments);
+      if (arguments[0] === 'quejas') { construirBarra(); sincronizar(); render(); }
+      return r;
+    };
+  }
+
+  // buildQuejasChart ya no usa los totales fijos: se redirige al render nuevo
+  window.buildQuejasChart = function (carrier) {
+    if (!QUEJAS_MES[carrier]) return;
+    pintarDona(carrier, datos(carrier));
+  };
+
+  function arranque() {
+    inyectarEstilos();
+    var sec = document.getElementById('quejas');
+    if (sec && sec.classList.contains('active')) { construirBarra(); render(); }
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function () { setTimeout(arranque, 0); });
+  } else {
+    setTimeout(arranque, 0);
+  }
+})();
+</script>
 </body>
 </html>
