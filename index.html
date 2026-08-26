@@ -2205,6 +2205,14 @@ function renderSemanalInit() {
     var cv = document.getElementById('dfChartPicos');
     if (!cv || typeof Chart === 'undefined') return;
     var r = dfRangoDias(), ini = r[0], fin = r[1];
+    // Antes de DIA_LOTE los envíos se creaban en lote: la cohorte diaria da
+    // ratios de hasta 89% que no significan nada y aplastan la escala. No se
+    // grafican; el aviso del pie lo dice.
+    var recortado = 0;
+    if (typeof DIA_LOTE !== 'undefined') {
+      while (ini <= fin && DIA_DAYS[ini] < DIA_LOTE) { ini++; recortado++; }
+    }
+    if (ini > fin) { ini = r[0]; fin = r[1]; recortado = 0; }
     var hel = dfSerie('hel', ini, fin);
     var env = [];
     for (var i = ini; i <= fin; i++) {
@@ -2215,7 +2223,8 @@ function renderSemanalInit() {
       });
       env.push(t);
     }
-    var tasa = hel.map(function (h, k) { return env[k] ? Math.round(h / env[k] * 1000 * 100) / 100 : null; });
+    // porcentaje, no por-1k: los valores van de 2% a 37% y '372 por 1k' se lee mal
+    var tasa = hel.map(function (h, k) { return env[k] ? Math.round(h / env[k] * 10000) / 100 : null; });
     var vals = tasa.filter(function (x) { return x !== null && x > 0; }).sort(function (a, b) { return a - b; });
     var med = vals.length ? vals[Math.floor(vals.length / 2)] : 0;
     var umbral = med * 2;
@@ -2231,8 +2240,7 @@ function renderSemanalInit() {
         datasets: [{
           label: 'Problemas por 1k envíos creados ese día',
           data: tasa,
-          backgroundColor: tasa.map(function (x, k) {
-            if (ini + k <= loteHasta) return 'rgba(138,143,152,.35)';
+          backgroundColor: tasa.map(function (x) {
             return (x !== null && umbral && x >= umbral) ? '#C7443B' : '#7B52B8';
           }),
           borderWidth: 0
@@ -2240,15 +2248,18 @@ function renderSemanalInit() {
       },
       options: {
         responsive: true, maintainAspectRatio: false,
-        scales: { x: { grid: { display: false }, ticks: { maxTicksLimit: 14 } }, y: { beginAtZero: true } },
+        scales: {
+          x: { grid: { display: false }, ticks: { maxTicksLimit: 14 } },
+          y: { beginAtZero: true, title: { display: true, text: '% de los envíos creados ese día' },
+               ticks: { callback: function (val) { return val + '%'; } } }
+        },
         plugins: {
           legend: { display: false },
           tooltip: {
             callbacks: {
+              label: function (ctx) { return (ctx.parsed.y === null ? '—' : ctx.parsed.y.toFixed(2) + '%') + ' con problema'; },
               afterLabel: function (ctx) {
-                var gi = ini + ctx.dataIndex;
-                return fmt(hel[ctx.dataIndex]) + ' problemas · ' + fmt(env[ctx.dataIndex]) + ' envíos' +
-                  (gi <= loteHasta ? ' · carga por lote, no confiable' : '');
+                return fmt(hel[ctx.dataIndex]) + ' problemas · ' + fmt(env[ctx.dataIndex]) + ' envíos creados';
               }
             }
           }
@@ -2257,25 +2268,25 @@ function renderSemanalInit() {
     });
     var picos = [];
     tasa.forEach(function (x, k) {
-      if (x !== null && umbral && x >= umbral && ini + k > loteHasta) picos.push({ d: DIA_DAYS[ini + k], v: x });
+      if (x !== null && umbral && x >= umbral) picos.push({ d: DIA_DAYS[ini + k], v: x });
     });
     picos.sort(function (a, b) { return b.v - a.v; });
     var sub = document.getElementById('dfPicosSub');
-    if (sub) sub.textContent = 'Problemas de entrega por 1k envíos creados ese día · ' +
+    if (sub) sub.textContent = '% de los envíos creados cada día que acabaron con un problema de entrega · ' +
       (dfCarrier === 'Todos' ? 'los 3 carriers' : dfCarrier) + ' · ' + rangoTexto() + ' 2026';
     var nota = document.getElementById('dfPicosNota');
     if (nota) {
       var txt = 'Fuente: <strong>hel</strong> en el numerador, Frodo en el denominador. ' +
-        'Cada barra agrupa los problemas por el día en que se <em>creó el envío</em>, no por cuándo se reportaron: ' +
-        'así se ve si un lote salió mal. Mediana del periodo ' + (med || 0).toFixed(2) +
-        '; en rojo lo que pasa de ' + (umbral || 0).toFixed(2) + ', que es 2x la mediana.';
-      if (loteHasta >= ini) {
-        txt += ' Las barras grises son anteriores a ' + DIA_LOTE + ': ahí los envíos se creaban en lote y la' +
-          ' granularidad diaria no es confiable, así que no se marcan picos.';
+        'Cada barra agrupa los problemas por el día en que se <em>creó el envío</em>, no por cuándo se ' +
+        'reportaron: así se ve si un lote salió mal. Mediana del periodo ' + (med || 0).toFixed(2) +
+        '%; en rojo lo que pasa de ' + (umbral || 0).toFixed(2) + '%, que es 2x la mediana.';
+      if (recortado > 0) {
+        txt += ' Se omiten ' + recortado + ' días anteriores a ' + DIA_LOTE + ': en ese tramo los envíos se' +
+          ' creaban en lote y la cohorte diaria da ratios sin sentido (hasta 89%).';
       }
       txt += picos.length
         ? '<br><strong>Picos del periodo:</strong> ' + picos.slice(0, 6).map(function (p) {
-            return p.d + ' (' + p.v.toFixed(2) + ')'; }).join(' · ')
+            return p.d + ' (' + p.v.toFixed(2) + '%)'; }).join(' · ')
         : '<br>Sin días por encima del umbral en este periodo.';
       nota.innerHTML = txt;
     }
