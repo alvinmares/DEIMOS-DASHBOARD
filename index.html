@@ -2042,6 +2042,411 @@ function renderSemanalInit() {
     cont.innerHTML = h2;
   }
 
+  // ── Pestaña "Desfase y picos" ────────────────────────────────────────
+  // Tres preguntas: cuánto tarda un ticket en llegar tras el evento del envío,
+  // si algún día de envíos generó un pico, y cuántos tickets entran por día,
+  // de qué carrier y de qué estado.
+  //
+  // Ojo con las fuentes: `form` son los 19,021 tickets que alimentan el TR/1k;
+  // `hel` es hel__delivery_problems, ~10x más grande y ligado al envío al 100%.
+  // Cada panel dice cuál usa. No son sumables.
+  //
+  // El tab se monta solo: el botón del sidebar y el div de página los crea
+  // montarDesfase(), así que no hay markup nuevo en el HTML de esta página.
+  var dfFuente = 'form';   // histograma: 'form' | 'hel'
+  var dfCarrier = 'Todos'; // paneles diarios
+  var dfChart = {};
+  var MES_ABREV = ['ene', 'feb', 'mar', 'abr', 'may', 'jun',
+                   'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+  var COLOR = { 'DHL': '#60A5FA', 'Estafeta': '#26C6A0', '99min': '#F06292' };
+
+  function hayDes() {
+    return typeof DES_DIA !== 'undefined' && typeof DES_LAG !== 'undefined' &&
+           typeof DIA_DAYS !== 'undefined' && typeof DES_CUBETAS !== 'undefined';
+  }
+
+  // Índices de DIA_DAYS que caen dentro del rango de meses elegido.
+  function dfRangoDias() {
+    var ini = -1, fin = -1;
+    for (var i = 0; i < DIA_DAYS.length; i++) {
+      var m = parseInt(String(DIA_DAYS[i]).slice(0, 2), 10) - 1;
+      if (m >= desde && ini === -1) ini = i;
+      if (m <= hasta) fin = i;
+    }
+    if (ini === -1 || fin < ini) { ini = 0; fin = DIA_DAYS.length - 1; }
+    return [ini, fin];
+  }
+
+  function dfCarriers() { return dfCarrier === 'Todos' ? CARRIERS : [dfCarrier]; }
+
+  function dfSerie(clave, ini, fin) {
+    var out = [];
+    for (var i = ini; i <= fin; i++) {
+      var t = 0;
+      dfCarriers().forEach(function (c) {
+        var a = (DES_DIA[c] || {})[clave] || [];
+        t += a[i] || 0;
+      });
+      out.push(t);
+    }
+    return out;
+  }
+
+  function dfEtiquetas(ini, fin) {
+    return DIA_DAYS.slice(ini, fin + 1).map(function (d) {
+      var p = String(d).split('-');
+      return p[1] + ' ' + MES_ABREV[parseInt(p[0], 10) - 1];
+    });
+  }
+
+  function dfDestruir(id) {
+    if (dfChart[id]) { try { dfChart[id].destroy(); } catch (e) { } delete dfChart[id]; }
+  }
+
+  function dfHist(carrier) {
+    var meses = ((DES_LAG[dfFuente] || {})[carrier]) || [];
+    var tot = [];
+    for (var k = 0; k < DES_CUBETAS.length; k++) tot.push(0);
+    for (var m = desde; m <= hasta && m < meses.length; m++) {
+      (meses[m] || []).forEach(function (val, i) { tot[i] += val; });
+    }
+    return tot;
+  }
+
+  function dfPercentil(tot, p) {
+    var n = tot.reduce(function (a, b) { return a + b; }, 0);
+    if (!n) return null;
+    var acc = 0;
+    for (var i = 0; i < tot.length; i++) {
+      acc += tot[i];
+      if (acc >= n * p) return DES_CUBETAS[i];
+    }
+    return DES_CUBETAS[tot.length - 1];
+  }
+
+  function pintarHist() {
+    var cont = document.getElementById('dfHistKpis');
+    if (!cont) return;
+    var html = '';
+    CARRIERS.forEach(function (c) {
+      var t = dfHist(c);
+      var n = t.reduce(function (a, b) { return a + b; }, 0);
+      html += '<div class="kpi"><div class="kpi-accent" style="background:' + COLOR[c] + '"></div>' +
+        '<div class="kpi-val">' + (dfPercentil(t, 0.5) || '—') + '<span style="font-size:13px"> d</span></div>' +
+        '<div class="kpi-lbl">' + c + ' · mediana</div>' +
+        '<div class="kpi-note">p90 ' + (dfPercentil(t, 0.9) || '—') + ' d · ' + fmt(n) + ' registros</div></div>';
+    });
+    cont.innerHTML = html;
+    var cv = document.getElementById('dfChartHist');
+    if (!cv || typeof Chart === 'undefined') return;
+    dfDestruir('hist');
+    dfChart.hist = new Chart(cv, {
+      type: 'bar',
+      data: {
+        labels: DES_CUBETAS,
+        datasets: CARRIERS.map(function (c) {
+          return { label: c, data: dfHist(c), backgroundColor: COLOR[c], borderWidth: 0 };
+        })
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        scales: {
+          x: { title: { display: true, text: 'Días entre el evento del envío y el ticket' }, grid: { display: false } },
+          y: { title: { display: true, text: 'Registros' }, beginAtZero: true }
+        },
+        plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, padding: 10, font: { size: 11 } } } }
+      }
+    });
+    var sub = document.getElementById('dfHistSub');
+    if (sub) {
+      sub.textContent = dfFuente === 'form'
+        ? 'Días entre la entrega que reporta el ticket (col. K del form) y su creación · ' + rangoTexto() + ' 2026'
+        : 'Días entre la creación del envío y el alta del problema en hel · ' + rangoTexto() + ' 2026';
+    }
+    var nota = document.getElementById('dfHistNota');
+    if (nota) {
+      nota.innerHTML = dfFuente === 'form'
+        ? 'Fuente: <strong>form</strong>, los mismos tickets del TR/1k. Solo las filas con fecha de entrega capturada (86%). Se excluyen 194 desfases absurdos; los negativos quedan en la cubeta <code>&lt;0</code> y son error de captura del agente.'
+        : 'Fuente: <strong>hel</strong> (hel__delivery_problems), ~10x el volumen del form y ligado al envío al 100%. No es la misma población que el TR/1k: sirve para ver la forma de la distribución, no para comparar niveles contra el panel del form.';
+    }
+  }
+
+  function pintarDiaria() {
+    var cv = document.getElementById('dfChartDia');
+    if (!cv || typeof Chart === 'undefined') return;
+    var r = dfRangoDias(), ini = r[0], fin = r[1];
+    dfDestruir('dia');
+    dfChart.dia = new Chart(cv, {
+      type: 'line',
+      data: {
+        labels: dfEtiquetas(ini, fin),
+        datasets: [
+          { label: 'Por día en que entra el ticket', data: dfSerie('tix', ini, fin),
+            borderColor: '#7B52B8', backgroundColor: 'rgba(123,82,184,.12)',
+            fill: true, tension: .25, pointRadius: 0, borderWidth: 2 },
+          { label: 'Por día de la entrega que reportan', data: dfSerie('ent', ini, fin),
+            borderColor: '#F4A020', borderDash: [5, 3], fill: false,
+            tension: .25, pointRadius: 0, borderWidth: 2 }
+        ]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
+        scales: { x: { grid: { display: false }, ticks: { maxTicksLimit: 14 } }, y: { beginAtZero: true } },
+        plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, padding: 10, font: { size: 11 } } } }
+      }
+    });
+    var sub = document.getElementById('dfDiaSub');
+    if (sub) sub.textContent = 'Tickets del form por día · ' +
+      (dfCarrier === 'Todos' ? 'los 3 carriers' : dfCarrier) + ' · ' + rangoTexto() + ' 2026';
+  }
+
+  function pintarPicos() {
+    var cv = document.getElementById('dfChartPicos');
+    if (!cv || typeof Chart === 'undefined') return;
+    var r = dfRangoDias(), ini = r[0], fin = r[1];
+    var hel = dfSerie('hel', ini, fin);
+    var env = [];
+    for (var i = ini; i <= fin; i++) {
+      var t = 0;
+      dfCarriers().forEach(function (c) {
+        var a = ((typeof DIA_DATA !== 'undefined' && DIA_DATA[c]) || {}).env || [];
+        t += a[i] || 0;
+      });
+      env.push(t);
+    }
+    var tasa = hel.map(function (h, k) { return env[k] ? Math.round(h / env[k] * 1000 * 100) / 100 : null; });
+    var vals = tasa.filter(function (x) { return x !== null && x > 0; }).sort(function (a, b) { return a - b; });
+    var med = vals.length ? vals[Math.floor(vals.length / 2)] : 0;
+    var umbral = med * 2;
+    var loteHasta = -1;
+    if (typeof DIA_LOTE !== 'undefined') {
+      for (var j = 0; j < DIA_DAYS.length; j++) if (DIA_DAYS[j] < DIA_LOTE) loteHasta = j;
+    }
+    dfDestruir('picos');
+    dfChart.picos = new Chart(cv, {
+      type: 'bar',
+      data: {
+        labels: dfEtiquetas(ini, fin),
+        datasets: [{
+          label: 'Problemas por 1k envíos creados ese día',
+          data: tasa,
+          backgroundColor: tasa.map(function (x, k) {
+            if (ini + k <= loteHasta) return 'rgba(138,143,152,.35)';
+            return (x !== null && umbral && x >= umbral) ? '#C7443B' : '#7B52B8';
+          }),
+          borderWidth: 0
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        scales: { x: { grid: { display: false }, ticks: { maxTicksLimit: 14 } }, y: { beginAtZero: true } },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              afterLabel: function (ctx) {
+                var gi = ini + ctx.dataIndex;
+                return fmt(hel[ctx.dataIndex]) + ' problemas · ' + fmt(env[ctx.dataIndex]) + ' envíos' +
+                  (gi <= loteHasta ? ' · carga por lote, no confiable' : '');
+              }
+            }
+          }
+        }
+      }
+    });
+    var picos = [];
+    tasa.forEach(function (x, k) {
+      if (x !== null && umbral && x >= umbral && ini + k > loteHasta) picos.push({ d: DIA_DAYS[ini + k], v: x });
+    });
+    picos.sort(function (a, b) { return b.v - a.v; });
+    var sub = document.getElementById('dfPicosSub');
+    if (sub) sub.textContent = 'Problemas de entrega por 1k envíos creados ese día · ' +
+      (dfCarrier === 'Todos' ? 'los 3 carriers' : dfCarrier) + ' · ' + rangoTexto() + ' 2026';
+    var nota = document.getElementById('dfPicosNota');
+    if (nota) {
+      var txt = 'Fuente: <strong>hel</strong> en el numerador, Frodo en el denominador. ' +
+        'Cada barra agrupa los problemas por el día en que se <em>creó el envío</em>, no por cuándo se reportaron: ' +
+        'así se ve si un lote salió mal. Mediana del periodo ' + (med || 0).toFixed(2) +
+        '; en rojo lo que pasa de ' + (umbral || 0).toFixed(2) + ', que es 2x la mediana.';
+      if (loteHasta >= ini) {
+        txt += ' Las barras grises son anteriores a ' + DIA_LOTE + ': ahí los envíos se creaban en lote y la' +
+          ' granularidad diaria no es confiable, así que no se marcan picos.';
+      }
+      txt += picos.length
+        ? '<br><strong>Picos del periodo:</strong> ' + picos.slice(0, 6).map(function (p) {
+            return p.d + ' (' + p.v.toFixed(2) + ')'; }).join(' · ')
+        : '<br>Sin días por encima del umbral en este periodo.';
+      nota.innerHTML = txt;
+    }
+  }
+
+  function pintarEstados() {
+    var cv = document.getElementById('dfChartEst');
+    if (!cv || typeof Chart === 'undefined' || typeof DES_EST === 'undefined') return;
+    var r = dfRangoDias(), ini = r[0], fin = r[1];
+    var PAL = ['#F06292', '#F4A020', '#7B52B8', '#26C6A0', '#60A5FA', '#E040A0', '#BDBDBD', '#8A8F98'];
+    var ds = DES_EST_ORDEN.map(function (e, k) {
+      var serie = [];
+      for (var i = ini; i <= fin; i++) {
+        var t = 0;
+        dfCarriers().forEach(function (c) {
+          var a = (DES_EST[c] || {})[e] || [];
+          t += a[i] || 0;
+        });
+        serie.push(t);
+      }
+      var nombre = e === 'OTROS' ? 'Otros estados' : e === 'ND' ? 'Sin dato'
+        : ((typeof GEO_ESTADOS !== 'undefined' && GEO_ESTADOS[e]) || e);
+      return { label: nombre, data: serie, backgroundColor: PAL[k % PAL.length], borderWidth: 0 };
+    });
+    dfDestruir('est');
+    dfChart.est = new Chart(cv, {
+      type: 'bar',
+      data: { labels: dfEtiquetas(ini, fin), datasets: ds },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        scales: {
+          x: { stacked: true, grid: { display: false }, ticks: { maxTicksLimit: 14 } },
+          y: { stacked: true, beginAtZero: true }
+        },
+        plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, padding: 8, font: { size: 10.5 } } } }
+      }
+    });
+    var sub = document.getElementById('dfEstSub');
+    if (sub) sub.textContent = 'Tickets del form por día y estado · top 6 nacional · ' +
+      (dfCarrier === 'Todos' ? 'los 3 carriers' : dfCarrier) + ' · ' + rangoTexto() + ' 2026';
+  }
+
+  // Crea el botón del sidebar y el contenedor de página. Corre al cargar, para
+  // que goTo('desfase') encuentre el div y no truene.
+  function montarDesfase() {
+    if (!hayDes()) return;
+    var btns = document.querySelectorAll('.sidebar .view-btn');
+    var ultimo = btns.length ? btns[btns.length - 1] : null;
+    if (ultimo && !document.querySelector('.sidebar [data-df-nav]')) {
+      var b = document.createElement('button');
+      b.className = 'view-btn';
+      b.setAttribute('data-df-nav', '1');
+      b.setAttribute('onclick', "goTo('desfase',this)");
+      b.textContent = '⏱  Desfase y picos';
+      ultimo.parentElement.insertBefore(b, ultimo.nextSibling);
+    }
+    if (!document.getElementById('desfase')) {
+      var ref = document.getElementById('diaria');
+      if (ref && ref.parentElement) {
+        var pg = document.createElement('div');
+        pg.id = 'desfase';
+        pg.className = 'page';
+        ref.parentElement.insertBefore(pg, ref.nextSibling);
+      }
+    }
+  }
+
+  function construirDesfase() {
+    var pg = document.getElementById('desfase');
+    if (!pg || document.getElementById('dfCtrl')) return;
+    var ops = '';
+    for (var i = 0; i < nMes; i++) ops += '<option value="' + i + '">' + limpio(i) + '</option>';
+    pg.innerHTML =
+      '<div class="page-header"><h1>Desfase y picos</h1><p id="dfHeaderSub"></p></div>' +
+      '<div class="info-box"><strong>Ojo:</strong> esta pestaña usa dos fuentes y cada panel dice cuál. ' +
+      '<em>form</em> son los tickets del Google Form, los mismos que alimentan el TR/1k. ' +
+      '<em>hel</em> es el registro sistémico de problemas de entrega, casi 10x más grande y ligado al envío ' +
+      'al 100%, pero sin motivo ni geografía. No se suman entre sí.</div>' +
+      '<div class="quejas-filtro" id="dfCtrl">' +
+      '<span class="qf-lbl">Periodo</span>' +
+      '<button class="qf-preset" data-dp="ytd">2026 YTD</button>' +
+      '<button class="qf-preset" data-dp="3m">Últimos 3 meses</button>' +
+      '<button class="qf-preset" data-dp="mes">Mes actual</button>' +
+      '<span class="qf-lbl">De</span><select class="qf-sel" id="dfDesde">' + ops + '</select>' +
+      '<span class="qf-lbl">a</span><select class="qf-sel" id="dfHasta">' + ops + '</select>' +
+      '<span class="qf-sep"></span><span class="qf-lbl">Carrier</span>' +
+      '<button class="qf-preset" data-dc="Todos">Todos</button>' +
+      '<button class="qf-preset" data-dc="DHL">DHL</button>' +
+      '<button class="qf-preset" data-dc="Estafeta">Estafeta</button>' +
+      '<button class="qf-preset" data-dc="99min">99min</button></div>' +
+      '<div class="card"><div class="card-title">¿Cuánto tarda en llegar el ticket?</div>' +
+      '<div class="card-sub" id="dfHistSub"></div>' +
+      '<div class="quejas-filtro" style="margin:10px 0 14px"><span class="qf-lbl">Fuente</span>' +
+      '<button class="qf-preset" data-df="form">form · ticket vs. entrega</button>' +
+      '<button class="qf-preset" data-df="hel">hel · problema vs. creación</button></div>' +
+      '<div class="kpi-grid" id="dfHistKpis"></div>' +
+      '<div style="height:300px;margin-top:14px"><canvas id="dfChartHist"></canvas></div>' +
+      '<div class="geo-nota" id="dfHistNota"></div></div>' +
+      '<div class="card"><div class="card-title">Picos por día de creación del envío</div>' +
+      '<div class="card-sub" id="dfPicosSub"></div>' +
+      '<div style="height:280px"><canvas id="dfChartPicos"></canvas></div>' +
+      '<div class="geo-nota" id="dfPicosNota"></div></div>' +
+      '<div class="card"><div class="card-title">Tickets que entran por día</div>' +
+      '<div class="card-sub" id="dfDiaSub"></div>' +
+      '<div style="height:280px"><canvas id="dfChartDia"></canvas></div>' +
+      '<div class="geo-nota">La línea morada es el día en que entra el ticket; la naranja punteada, el día de la ' +
+      'entrega que ese ticket reporta. La distancia horizontal entre las dos es el desfase del primer panel.</div></div>' +
+      '<div class="card"><div class="card-title">De qué estado entran, por día</div>' +
+      '<div class="card-sub" id="dfEstSub"></div>' +
+      '<div style="height:300px"><canvas id="dfChartEst"></canvas></div>' +
+      '<div class="geo-nota">Fuente: <strong>form</strong>. Top 6 estados del año; el resto se agrupa en ' +
+      '"Otros estados". "Sin dato" son los tickets donde el agente no capturó el estado (~14%).</div></div>';
+
+    document.getElementById('dfCtrl').addEventListener('click', function (ev) {
+      var b = ev.target.closest ? ev.target.closest('.qf-preset') : null;
+      if (!b) return;
+      if (b.getAttribute('data-dp')) {
+        var p = b.getAttribute('data-dp');
+        if (p === 'ytd') { desde = 0; hasta = nMes - 1; }
+        else if (p === '3m') { desde = Math.max(0, nMes - 3); hasta = nMes - 1; }
+        else { desde = hasta = nMes - 1; }
+      } else if (b.getAttribute('data-dc')) {
+        dfCarrier = b.getAttribute('data-dc');
+      }
+      renderDesfase();
+    });
+    pg.addEventListener('click', function (ev) {
+      var b = ev.target.closest ? ev.target.closest('[data-df]') : null;
+      if (!b) return;
+      dfFuente = b.getAttribute('data-df');
+      renderDesfase();
+    });
+    function onSel() {
+      desde = +document.getElementById('dfDesde').value;
+      hasta = +document.getElementById('dfHasta').value;
+      if (desde > hasta) { var t = desde; desde = hasta; hasta = t; }
+      renderDesfase();
+    }
+    document.getElementById('dfDesde').addEventListener('change', onSel);
+    document.getElementById('dfHasta').addEventListener('change', onSel);
+  }
+
+  function renderDesfase() {
+    if (!hayDes()) return;
+    construirDesfase();
+    var d = document.getElementById('dfDesde'), h = document.getElementById('dfHasta');
+    if (d) d.value = desde;
+    if (h) h.value = hasta;
+    document.querySelectorAll('#dfCtrl [data-dp]').forEach(function (b) {
+      var p = b.getAttribute('data-dp');
+      var act = (p === 'ytd' && desde === 0 && hasta === nMes - 1) ||
+                (p === '3m' && desde === Math.max(0, nMes - 3) && hasta === nMes - 1) ||
+                (p === 'mes' && desde === nMes - 1 && hasta === nMes - 1);
+      b.classList.toggle('active', !!act);
+    });
+    document.querySelectorAll('#dfCtrl [data-dc]').forEach(function (b) {
+      b.classList.toggle('active', b.getAttribute('data-dc') === dfCarrier);
+    });
+    document.querySelectorAll('#desfase [data-df]').forEach(function (b) {
+      b.classList.toggle('active', b.getAttribute('data-df') === dfFuente);
+    });
+    var hs = document.getElementById('dfHeaderSub');
+    if (hs) hs.textContent = 'Desfase entre el envío y el ticket, y volumen diario · ' + rangoTexto() + ' 2026';
+    try { pintarHist(); } catch (e) { if (window.console) console.warn('hist:', e); }
+    try { pintarPicos(); } catch (e) { if (window.console) console.warn('picos:', e); }
+    try { pintarDiaria(); } catch (e) { if (window.console) console.warn('diaria:', e); }
+    try { pintarEstados(); } catch (e) { if (window.console) console.warn('est:', e); }
+  }
+
+  window.renderDesfase = renderDesfase;
+
   function render() {
     var totalGlobal = 0;
     CARRIERS.forEach(function (c) {
@@ -2078,6 +2483,7 @@ function renderSemanalInit() {
     window.renderPage = function () {
       var r = orig.apply(this, arguments);
       if (arguments[0] === 'quejas') { construirBarra(); sincronizar(); render(); }
+      if (arguments[0] === 'desfase') { renderDesfase(); }
       return r;
     };
   }
@@ -2090,6 +2496,7 @@ function renderSemanalInit() {
 
   function arranque() {
     inyectarEstilos();
+    try { montarDesfase(); } catch (e) { if (window.console) console.warn('montarDesfase:', e); }
     var sec = document.getElementById('quejas');
     if (sec && sec.classList.contains('active')) { construirBarra(); render(); }
   }
