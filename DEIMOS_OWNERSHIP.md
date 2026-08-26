@@ -43,6 +43,7 @@ README.md
 | `SEM_DATA` | `env` / `tix` / `tr` semanal por carrier |
 | `QUEJAS_CATS` / `QUEJAS_MES` | Motivos de queja: catálogo y desglose mensual por carrier (ver §9) |
 | `GEO_ESTADOS` / `GEO_MES` / `GEO_CP` | Geografía de las quejas: estado y CP (ver §10) |
+| `DES_DIA` / `DES_LAG` / `DES_EST` | Desfase, cohortes y series diarias (ver §11) |
 
 Todos los arrays de un mismo bloque deben tener **exactamente la misma longitud** que `ALL_MONTHS` (o `SEM_WEEKS`).
 
@@ -95,6 +96,7 @@ en `mensaje`, porque esa línea se muestra en el dashboard.
 | Tickets | Google Form → Sheet `1l-41UEE_CsqBuv5KsQ9b1BHHRmzBnI-c5xYeUgr1TNs` — *"Lifecycle - Problemas y dudas con envíos de tarjeta (Respuestas)"* | Owner: mayra.molina@nubank.com.mx |
 | Envíos y DR | Databricks `etl.mx__contract.frodo__deliveries` | — |
 | Metodología | Dashboard QuickSight de Patrick (data owner) | validación |
+| Problemas de entrega | Databricks `etl.mx__contract.hel__delivery_problems` | solo pestaña §11 |
 
 ### Columnas del Sheet que importan
 
@@ -403,7 +405,91 @@ del dashboard lo va a gritar.
 
 ---
 
-## 11. Severidad TR/1k
+## 11. Desfase y picos
+
+Agregada el 25 ago 2026. Responde tres cosas: cuánto tarda un ticket en llegar
+después del evento del envío, si los envíos creados un día concreto generaron un
+pico, y cuántos tickets entran por día, de qué carrier y de qué estado.
+
+### ⚠️ Dos poblaciones en la misma pestaña
+
+Esto es lo que hay que entender antes de mirar cualquier número:
+
+| | `form` | `hel` |
+|---|---|---|
+| Qué es | Los tickets del Google Form | `hel__delivery_problems`, excepciones del sistema |
+| Volumen 2026 | 19,021 | ~179,000 |
+| ¿Alimenta el TR/1k? | **Sí** | No |
+| Liga al envío | 68–95% vía código de guía | **100% vía `delivery_id`** |
+| Motivo y geografía | Sí | No (`reason` viene NULL) |
+
+**No son sumables ni comparables en nivel.** Cada panel dice de cuál viene, y la
+caja amarilla arriba de la pestaña lo repite. Se usan las dos porque cada una
+puede lo que la otra no: el form tiene geografía y motivo; hel tiene el vínculo
+exacto al envío, que es lo único que permite armar cohortes por día de creación.
+
+### Por qué la cohorte de creación usa hel y no el form
+
+Para agrupar tickets del form por el día en que se creó su envío hay que unir el
+código de la col. F contra Frodo. **El join sí funciona**, con cuatro llaves:
+
+| Formato en col. F | Llave en Frodo | Share |
+|---|---|---|
+| `N######X######` | `delivery__reference_code` | 34% |
+| 22 chars alfanum. | `delivery__carrier_code` (Estafeta) | 36% |
+| 10 dígitos | `delivery__carrier_code` (DHL) | 3% |
+| UUID | `delivery__package_id` | 24% |
+
+Los UUIDs **no son basura**: son el `package_id` que el agente pegó en lugar del
+número de guía. Con las cuatro llaves el match sale ~95%.
+
+El problema no es el join, es la plomería: mover 19 mil códigos del Sheet a
+Databricks solo puede pasar por el contexto del agente, y son ~590 KB de query
+**por ciclo**. Con hel el mismo cálculo es una query de 20 líneas y sale gratis.
+Si algún día se ingesta el form al warehouse, esto se puede rehacer con la
+población del TR/1k y sería lo ideal.
+
+### Los cuatro paneles
+
+1. **Histograma de desfase**, 18 cubetas, con mediana y p90 por carrier, y toggle
+   de fuente. Con `form` mide días entre la entrega que reporta el ticket
+   (col. K) y su creación; con `hel`, entre la creación del envío y el alta del
+   problema.
+2. **Picos por día de creación del envío**: % de los envíos de cada día que
+   acabaron con un problema. Numerador hel, denominador `DIA_DATA.env`. Marca en
+   rojo lo que pasa de 2x la mediana.
+3. **Tickets que entran por día** (form), con la serie por fecha de entrega
+   reportada encima. La distancia horizontal entre las dos curvas *es* el desfase.
+4. **Tickets por día y estado** (form), apilado, top 6 + otros + sin dato.
+
+### Números de referencia al corte del 22 ago
+
+- **form**: el ticket llega mediana **1 día** (DHL) o **2 días** (Estafeta, 99min)
+  después de la entrega que reporta. p90 de 4 días en los tres. El 94% cae entre
+  0 y 5 días.
+- **hel**: el problema se levanta mediana 2–3 días después de crear el envío,
+  p90 entre 5 y 7. Cero negativos por construcción.
+- **Picos**: la mediana de un día es **4.08%** de sus envíos con problema. Los
+  picos reales del año son **05-07 (37.26%)** y **06-04 (25.71%)**, muy por
+  encima del resto.
+
+### Caveats al regenerar
+
+- El panel de picos **omite los días anteriores a `DIA_LOTE`** (120 días). En ese
+  tramo los envíos se creaban en lote, así que la cohorte diaria daba ratios de
+  hasta 89% que no significan nada y aplastaban la escala.
+- La serie de `entregas` viene de `delivery__status_updated_at`, que también trae
+  actualizaciones en lote: 5–6 días con picos, todos entre el 23-ene y el 23-mar
+  salvo uno de 99min el 1-jul. Cero desde mayo.
+- El desfase del form excluye **194 filas absurdas** (>400d o <-30d; 24 son error
+  de año, escribieron 2025) y **sí incluye 426 negativos**, que salen en la cubeta
+  `<0` y son error de captura del agente.
+- La col. K solo está en el 86% de los tickets, así que el histograma `form`
+  corre sobre 16,128 filas y no sobre las 19,021.
+
+---
+
+## 12. Severidad TR/1k
 
 | Color | Rango | CSS |
 |---|---|---|
@@ -418,4 +504,4 @@ Delivery Rate (higher is better): 🟢 ≥ 90 · 🟡 85–90 · 🟠 75–85 ·
 
 *Actualizado: 25 ago 2026 — datos al 22 ago 2026 (agosto parcial)*
 
-*Última función agregada: geografía de las quejas (§10).*
+*Última función agregada: desfase y picos (§11).*
