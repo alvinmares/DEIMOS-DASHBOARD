@@ -355,12 +355,45 @@ Del mismo formulario, no de Frodo:
 
 | Col. | Campo | Calidad |
 |---|---|---|
-| J | Estado | **Buena.** Códigos de 2 letras ya normalizados: llegan los 32 estados y nada más, sin variantes de texto libre. 86% de cobertura, estable mes a mes. |
-| M | CP verificado en SEPOMEX | Buena, 80% de cobertura. |
+| J | Estado | **Buena donde existe.** Códigos de 2 letras ya normalizados: llegan los 32 estados y nada más, sin variantes de texto libre. Cobertura 86% — y el 14% que falta **no es aleatorio**, ver abajo. |
+| M | CP verificado en SEPOMEX | Buena donde existe. Falta en **exactamente las mismas filas** que el estado. |
 | N | Colonia | Texto libre. Se usa **solo como etiqueta** del CP (la colonia más frecuente dentro de él). |
 
-El 14% sin estado se publica como `ND` → "Sin dato", para que los totales cuadren
-con `RAW.tix`. El validador del pie comprueba justamente eso.
+### ⚠️ El "Sin dato" es estructural: el form solo pide dirección en 2 de los 5 motivos
+
+Esto no es captura floja de los agentes. Es determinista por motivo. Medido sobre 2026
+YTD al corte del 30 ago 2026:
+
+| Motivo (col. I) | Tickets | Sin estado |
+|---|---|---|
+| Falsa entrega | 16,804 | **0%** |
+| Cambio de carrier | 229 | **0%** |
+| Entregas cruzadas | 1,619 | **100%** |
+| Problemas con la mensajería | 1,043 | **100%** |
+| Problemas internos | 135 | **100%** |
+
+Y los tickets sin estado son **exactamente los mismos** que no traen CP: no es un campo
+olvidado, es la sección de dirección completa que el formulario no muestra en esas tres
+ramas.
+
+Las consecuencias son grandes:
+
+- **Esta pestaña no es "geografía de las quejas", es geografía de falsa entrega.** Casi
+  todo lo que tiene ubicación viene de ese motivo.
+- **El ND por carrier no mide calidad de captura.** Estafeta 19.6%, DHL 14.7%, 99min 8.1%:
+  eso solo refleja cuánto pesan esos tres motivos en su mezcla. Estafeta no captura peor,
+  tiene más entrega cruzada.
+- **La entrega cruzada de Estafeta — su hallazgo diferencial, ~14.5% de sus tickets — no se
+  puede estudiar geográficamente.** Agregar la sección de dirección a esas tres ramas del
+  formulario vale más que cualquier función nueva del dashboard. El owner del form es
+  Liliana Morales.
+
+> Si algún ciclo ves el ND moverse mucho, **divídelo por motivo antes de perseguirlo**: va a
+> cuadrar exacto con la suma de esos tres y lo que se movió fue la mezcla, no la captura.
+> Pasó en julio 2026: Estafeta llegó a 29% de ND en la semana del 13 y no había nada roto.
+
+El `ND` se publica igual, para que los totales cuadren con `RAW.tix`. El validador del pie
+comprueba justamente eso.
 
 ### ⚠️ No hay denominador. Son conteos, no tasas.
 
@@ -566,6 +599,6 @@ Delivery Rate (higher is better): 🟢 ≥ 90 · 🟡 85–90 · 🟠 75–85 ·
 
 ---
 
-*Actualizado: 25 ago 2026 — datos al 22 ago 2026 (agosto parcial)*
+*Actualizado: 31 ago 2026 — datos al 30 ago 2026 (agosto parcial)*
 
-*Última función agregada: desfase y picos (§11).*
+*Última función agregada: modo semana de la pestaña de quejas (§13).*
