@@ -93,10 +93,19 @@ en `mensaje`, porque esa línea se muestra en el dashboard.
 
 | Métrica | Fuente | Acceso |
 |---|---|---|
-| Tickets | Google Form → Sheet `1l-41UEE_CsqBuv5KsQ9b1BHHRmzBnI-c5xYeUgr1TNs` — *"Lifecycle - Problemas y dudas con envíos de tarjeta (Respuestas)"* | Owner: mayra.molina@nubank.com.mx |
+| Tickets | Google Form → Sheet `1qC4iI_i6bcIrqp-2-dCpmTZ6GJoXCs3lg2ZCnS0Kk94` — *"Lifecycle - Problemas y dudas con envíos de tarjeta (Respuestas)"* | Owner: mario.buendia@nubank.com.mx |
 | Envíos y DR | Databricks `etl.mx__contract.frodo__deliveries` | — |
 | Metodología | Dashboard QuickSight de Patrick (data owner) | validación |
 | Problemas de entrega | Databricks `etl.mx__contract.hel__delivery_problems` | solo pestaña §11 |
+
+> ⚠️ **El Sheet cambió de ID el 24-ago-2026.** El anterior
+> (`1l-41UEE…gr1TNs`, owner mayra.molina) dejó de recibir respuestas el 23-ago y fue
+> renombrado *"(Respuestas dep)"*. **Sigue respondiendo 200 OK con datos que parecen
+> válidos**, así que apuntarle publica tickets congelados sin que el validador se queje.
+> El vivo es el de la tabla de arriba. El layout de columnas es idéntico, así que las
+> queries de esta guía sirven tal cual. Detectado el 31-ago-2026; no hubo anuncio.
+> Al migrar, febrero ganó 206 tickets que el Sheet viejo no tenía (DHL +8, Estafeta +98,
+> 99min +100), así que el TR/1k de feb subió 9–12% vs. lo publicado hasta el ciclo del 22-ago.
 
 ### Columnas del Sheet que importan
 
@@ -201,7 +210,7 @@ En vez de bajar el archivo, se le pregunta al Sheet directamente con la **Google
 
 ```js
 async function tq(q){
-  const id = '1l-41UEE_CsqBuv5KsQ9b1BHHRmzBnI-c5xYeUgr1TNs';
+  const id = '1qC4iI_i6bcIrqp-2-dCpmTZ6GJoXCs3lg2ZCnS0Kk94';
   const url = `https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:csv&gid=0&tq=` + encodeURIComponent(q);
   return (await fetch(url, {credentials:'include'})).text();
 }
