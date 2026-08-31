@@ -2724,23 +2724,29 @@ function renderSemanalInit() {
             } else { n.style.display="none"; }
           }
         }
-        /* la tarjeta de CP miente cuando el volumen es chico: 6 CPs de 1 ticket no son una concentracion */
+      });
+      revisaCP();
+    }
+    /* La tarjeta de CP miente cuando el volumen es chico: seis CPs de 1 ticket no son
+       una concentracion. Va aparte de postGeo() porque esa tarjeta no se llena en el
+       render: se llena cuando el usuario hace clic en un estado del ranking. */
+    function revisaCP(){
+      if(!HAYGEO) return;
+      CS.forEach(function(c){
         var cp=document.getElementById("geoCp-"+c);
-        if(cp){
-          var filas=[].slice.call(cp.querySelectorAll("tr")).slice(1);
-          if(filas.length){
-            var mx=0;
-            filas.forEach(function(r){
-              var td=r.querySelectorAll("td"); if(td.length<2) return;
-              var val=parseInt((td[td.length-2].innerText||"").replace(/[^0-9]/g,""),10)||0;
-              if(val>mx) mx=val;
-            });
-            if(mx<3){
-              cp.innerHTML='<div class="qs-nocp">Sin concentración por CP en este periodo: ningún código '
-                +'postal pasa de '+mx+(mx===1?" ticket":" tickets")+'. Con este volumen el top 6 es ruido, '
-                +'no un patrón — amplía el rango a <b>Últimas 4</b> o <b>Últimas 12</b> para que sea legible.</div>';
-            }
-          }
+        if(!cp) return;
+        var filas=[].slice.call(cp.querySelectorAll("tr")).slice(1);
+        if(!filas.length) return;
+        var mx=0;
+        filas.forEach(function(r){
+          var td=r.querySelectorAll("td"); if(td.length<2) return;
+          var val=parseInt((td[td.length-2].innerText||"").replace(/[^0-9]/g,""),10)||0;
+          if(val>mx) mx=val;
+        });
+        if(mx<3){
+          cp.innerHTML='<div class="qs-nocp">Sin concentración por CP en este periodo: ningún código '
+            +'postal pasa de '+mx+(mx===1?" ticket":" tickets")+'. Con este volumen el top 6 es ruido, '
+            +'no un patrón — amplía el rango a <b>Últimas 4</b> o <b>Últimas 12</b> para que sea legible.</div>';
         }
       });
     }
@@ -2811,6 +2817,9 @@ function renderSemanalInit() {
       }
     }
 
+    /* el ranking de estados llena la tarjeta de CP al hacer clic, asi que hay que
+       revisarla despues de cada clic dentro de la pestana, no solo tras el render. */
+    host.addEventListener("click",function(){ setTimeout(revisaCP,260); });
     barra.addEventListener("click",function(e){ var b=e.target.closest("[data-modo]"); if(b) modo(b.dataset.modo); });
     ctrl.addEventListener("click",function(e){ var b=e.target.closest("[data-pre]"); if(!b) return;
       var n=+b.dataset.pre; S.hasta=NW-1; S.desde=Math.max(0,NW-n); pinta(); });
