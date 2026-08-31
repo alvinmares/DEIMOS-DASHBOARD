@@ -123,6 +123,27 @@ const QUEJAS_MES = {
 // Compatibilidad: la forma vieja {labels,data,colors} derivada del acumulado
 // del año. Nada nuevo la usa —el filtro lee QUEJAS_MES— pero evita que una
 // llamada heredada a buildQuejasChart truene.
+/* QUEJAS_SEM — motivos de queja por SEMANA (lunes-domingo), alineado a SEM_WEEKS.
+   Mismo origen y taxonomia que QUEJAS_MES (col. I del form, fundiendo las dos cadenas
+   de "Cambio de carrier"), pero cortado por semana ISO en lugar de por mes.
+   Habilita el filtro semanal y la comparativa WoW de la pestana de quejas.
+
+   INVARIANTE: para cada carrier y cada semana, la suma de los 5 motivos es exactamente
+   SEM_DATA[carrier].tix[i]. Verificado al publicar (773 / 9,755 / 9,053 al corte del
+   30-ago-2026). Ojo: el total NO cuadra con RAW.tix porque la semana parcial del
+   29-dic-2025 no se publica en SEM_WEEKS (son 249 tickets que quedan fuera).
+
+   Regenerar con la misma query de QUEJAS_MES pero agrupando por semana:
+     select month(A), day(A), H, I, count(A)
+     where A >= date '2026-01-01' and (H='DHL' or H='Estafeta' or H='99 Minutos')
+     group by month(A), day(A), H, I
+   y bucketear al lunes de cada fecha en el cliente. */
+const QUEJAS_SEM = {
+  'DHL'     : { falsa:[14,24,25,31,23,14,4,23,14,8,6,19,13,15,29,24,25,25,26,38,18,30,20,11,16,12,10,10,10,14,25,29,19,18], cruzada:[0,0,0,0,0,0,0,1,0,0,0,0,0,3,0,0,0,0,0,0,0,0,0,0,1,0,1,0,0,0,0,0,2,0], mensajeria:[10,13,6,4,2,2,3,0,1,5,4,1,0,2,1,2,1,0,4,3,2,4,0,1,5,1,4,1,1,1,2,3,4,2], cambio:[0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,2,2,0,7,3,1,0,1,0,2,0,1,0,0,1,0,0,0,0], internos:[0,1,1,0,1,2,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0] },
+  'Estafeta': { falsa:[181,254,247,307,292,155,172,231,199,170,124,283,253,261,297,291,234,290,282,277,288,262,298,199,166,149,161,123,140,136,197,274,325,206], cruzada:[23,53,54,46,31,55,38,39,34,39,46,35,235,96,42,29,22,28,26,24,32,19,36,24,24,22,29,38,33,24,12,21,65,22], mensajeria:[21,17,19,26,14,14,11,17,4,9,8,16,12,19,19,12,10,14,13,13,11,9,12,1,11,10,10,12,15,18,7,9,13,15], cambio:[0,0,0,0,0,0,0,0,0,0,0,0,1,0,2,1,2,1,35,32,7,4,9,3,3,0,2,4,1,1,5,3,3,0], internos:[9,3,4,3,6,9,0,0,1,4,4,3,4,1,1,3,1,0,5,4,2,0,0,3,0,0,1,2,0,2,0,0,0,0] },
+  '99min'   : { falsa:[203,353,363,424,374,245,231,254,261,220,115,348,358,307,405,415,276,286,270,235,184,222,206,161,135,83,85,85,95,116,147,227,304,240], cruzada:[31,15,7,3,11,14,4,1,1,4,5,6,5,5,3,4,3,6,4,8,6,1,1,2,3,5,6,3,3,7,2,3,3,7], mensajeria:[17,11,13,18,21,10,12,10,12,15,16,16,13,12,13,4,10,22,41,51,13,14,10,9,20,9,12,10,6,8,5,10,10,16], cambio:[0,0,0,0,0,0,0,0,0,0,0,0,0,0,3,2,0,2,38,25,3,4,3,2,1,0,0,2,1,0,2,0,1,0], internos:[3,2,2,3,3,4,5,2,2,3,3,1,0,1,1,0,2,1,1,0,1,2,2,0,1,1,2,0,0,0,0,0,0,2] },
+}
+
 const QUEJAS_DATA = (function () {
   var o = {};
   Object.keys(QUEJAS_MES).forEach(function (car) {
