@@ -2573,7 +2573,9 @@ function renderSemanalInit() {
      +".qs-wow-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:10px}"
      +"@media(max-width:1100px){.qs-wow-grid{grid-template-columns:1fr}}"
      +".qs-wow-cell{position:relative;height:180px}"
-     +".qs-wow-h{font-size:12px;font-weight:600;margin-bottom:4px}";
+     +".qs-wow-h{font-size:12px;font-weight:600;margin-bottom:4px}"
+     +".qs-ndnota{font-size:11px;color:#6b7280;margin-top:10px;line-height:1.45;border-top:1px solid rgba(138,143,152,.18);padding-top:8px}"
+     +".qs-nocp{font-size:12px;color:#6b7280;line-height:1.5;padding:10px 2px}";
     document.head.appendChild(st);
 
     var barra=document.createElement("div");
@@ -2633,10 +2635,12 @@ function renderSemanalInit() {
         /* estados: los mismos dos slots que los motivos, asi la columna
            "vs. previo" del ranking compara semana contra semana. */
         CS.forEach(function(c){ Object.keys(GEO_MES[c]).forEach(function(e){
-          var ser=(GEO_SEM[c]||{})[e]||[];
           var a=new Array(OGEO[c][e].length).fill(0);
-          a[SLOT_ACT]=suma(ser,S.desde,S.hasta);
-          a[SLOT_PRE]=pr? suma(ser,pa,pb) : 0;
+          if(e!=="ND"){   /* ND se queda en cero: ver ocultaND() */
+            var ser=(GEO_SEM[c]||{})[e]||[];
+            a[SLOT_ACT]=suma(ser,S.desde,S.hasta);
+            a[SLOT_PRE]=pr? suma(ser,pa,pb) : 0;
+          }
           GEO_MES[c][e]=a;
         }); });
         /* CP: GEO_CP_SEM guarda 8 CPs por par; re-rankeamos por el rango elegido
@@ -2679,6 +2683,67 @@ function renderSemanalInit() {
         });
       });
     }
+    /* "Sin dato" no es un lugar: sacarlo de la tabla de estados y del denominador.
+       Se publica igual en el pie de la tarjeta, con el motivo. */
+    function ocultaND(){
+      if(!HAYGEO) return;
+      CS.forEach(function(c){
+        if(GEO_MES[c] && GEO_MES[c]["ND"]) GEO_MES[c]["ND"]=new Array(OGEO[c]["ND"].length).fill(0);
+      });
+    }
+    function sinEstado(c){
+      if(!HAYGEO) return null;
+      if(S.modo==="sem"){
+        return {nd:suma((GEO_SEM[c]||{})["ND"]||[],S.desde,S.hasta),
+                tot:suma(SEM_DATA[c].tix,S.desde,S.hasta)};
+      }
+      var d=document.getElementById("qfDesde"), h=document.getElementById("qfHasta");
+      var a=d? +d.value:0, b=h? +h.value:ORAW[c].tix.length-1;
+      var nd=0, tot=0;
+      for(var i=a;i<=b;i++){ nd+=OGEO[c]["ND"][i]||0; tot+=ORAW[c].tix[i]||0; }
+      return {nd:nd, tot:tot};
+    }
+    function postGeo(){
+      if(!HAYGEO) return;
+      CS.forEach(function(c){
+        /* nota al pie del ranking de estados */
+        var lista=document.getElementById("geoLista-"+c);
+        if(lista){
+          var card=lista.closest(".card");
+          if(card){
+            var n=card.querySelector(".qs-ndnota");
+            if(!n){ n=document.createElement("div"); n.className="qs-ndnota"; card.appendChild(n); }
+            var x=sinEstado(c);
+            if(x && x.nd>0){
+              var pct=x.tot? (x.nd/x.tot*100).toFixed(1) : "0.0";
+              n.innerHTML="* "+x.nd.toLocaleString("es-MX")+" tickets ("+pct+"%) no traen estado y quedan "
+                +"<b>fuera de esta tabla y del porcentaje</b>. No es captura floja: el formulario solo pide "
+                +"dirección en «Falsa entrega» y «Cambio de carrier». Entregas cruzadas, problemas con la "
+                +"mensajería y problemas internos nunca la capturan.";
+              n.style.display="";
+            } else { n.style.display="none"; }
+          }
+        }
+        /* la tarjeta de CP miente cuando el volumen es chico: 6 CPs de 1 ticket no son una concentracion */
+        var cp=document.getElementById("geoCp-"+c);
+        if(cp){
+          var filas=[].slice.call(cp.querySelectorAll("tr")).slice(1);
+          if(filas.length){
+            var mx=0;
+            filas.forEach(function(r){
+              var td=r.querySelectorAll("td"); if(td.length<2) return;
+              var val=parseInt((td[td.length-2].innerText||"").replace(/[^0-9]/g,""),10)||0;
+              if(val>mx) mx=val;
+            });
+            if(mx<3){
+              cp.innerHTML='<div class="qs-nocp">Sin concentración por CP en este periodo: ningún código '
+                +'postal pasa de '+mx+(mx===1?" ticket":" tickets")+'. Con este volumen el top 6 es ruido, '
+                +'no un patrón — amplía el rango a <b>Últimas 4</b> o <b>Últimas 12</b> para que sea legible.</div>';
+            }
+          }
+        }
+      });
+    }
     function barrasWow(){
       var pr=rangoPrevio(), grid=document.getElementById("qsWowGrid");
       document.getElementById("qsWowSub").textContent=
@@ -2716,8 +2781,10 @@ function renderSemanalInit() {
         b.classList.toggle("active", +b.dataset.pre===n && S.hasta===NW-1); });
       inyecta();
       selMes(SLOT_ACT,SLOT_ACT);
+      ocultaND();
       renderQuejas();
       geo(!HAYGEO);   /* solo se oculta si data.js no trae la geo semanal */
+      postGeo();
       barrasWow();
       info();
     }
@@ -2736,8 +2803,10 @@ function renderSemanalInit() {
         filtro.style.display=""; ctrl.style.display="none"; wow.style.display="none";
         CS.forEach(function(c){ if(charts[c]){ charts[c].destroy(); delete charts[c]; } });
         if(guardado) selMes(guardado[0],guardado[1]);
+        ocultaND();
         renderQuejas();
         geo(false);
+        postGeo();
         if(subt&&subtOrig!==null) subt.innerHTML=subtOrig;
       }
     }
