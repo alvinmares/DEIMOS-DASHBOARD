@@ -2532,7 +2532,8 @@ function renderSemanalInit() {
      Lo unico adicional en modo semana es la grafica de barras: motivos de la
      semana actual contra la previa.
 
-     La geografia se oculta en modo semana: GEO_MES y GEO_CP solo existen por mes.
+     La geografia tambien responde al toggle, via GEO_SEM y GEO_CP_SEM. Si esos dos
+     bloques no estan en data.js, esas tarjetas se ocultan en modo semana.
      Requiere QUEJAS_SEM en data.js. Si no esta, el bloque no hace nada.
      ================================================================ -->
 <script>
@@ -2555,6 +2556,15 @@ function renderSemanalInit() {
     CS.forEach(function(c){ ORIG[c]={}; CATS.forEach(function(k){ ORIG[c][k.key]=(QUEJAS_MES[c][k.key]||[]).slice(); }); });
     var OM=[ALL_MONTHS[SLOT_PRE],ALL_MONTHS[SLOT_ACT]];
     var ORAW={}; CS.forEach(function(c){ ORAW[c]={env:RAW[c].env.slice(),tix:RAW[c].tix.slice(),cr:RAW[c].cr.slice()}; });
+    var HAYGEO=(typeof GEO_SEM!=="undefined" && typeof GEO_CP_SEM!=="undefined"
+                && typeof GEO_MES!=="undefined" && typeof GEO_CP!=="undefined");
+    var OGEO=null, OGCP=null;
+    if(HAYGEO){
+      OGEO={}; CS.forEach(function(c){ OGEO[c]={};
+        Object.keys(GEO_MES[c]).forEach(function(e){ OGEO[c][e]=GEO_MES[c][e].slice(); }); });
+      OGCP={}; Object.keys(GEO_CP).forEach(function(k){
+        OGCP[k]={c:GEO_CP[k].c.map(function(x){ return [x[0],x[1],x[2].slice()]; }), t:GEO_CP[k].t.slice()}; });
+    }
     var subt=document.querySelector("#quejas .page-header p");
     var subtOrig=subt? subt.innerHTML : null;
 
@@ -2619,11 +2629,40 @@ function renderSemanalInit() {
         RAW[c].env[SLOT_ACT]=ea; RAW[c].tix[SLOT_ACT]=ta; RAW[c].cr[SLOT_ACT]= ea? Math.round(ta/ea*100000)/100 : 0;
         RAW[c].env[SLOT_PRE]=ep; RAW[c].tix[SLOT_PRE]=tp; RAW[c].cr[SLOT_PRE]= ep? Math.round(tp/ep*100000)/100 : 0;
       });
+      if(HAYGEO){
+        /* estados: los mismos dos slots que los motivos, asi la columna
+           "vs. previo" del ranking compara semana contra semana. */
+        CS.forEach(function(c){ Object.keys(GEO_MES[c]).forEach(function(e){
+          var ser=(GEO_SEM[c]||{})[e]||[];
+          var a=new Array(OGEO[c][e].length).fill(0);
+          a[SLOT_ACT]=suma(ser,S.desde,S.hasta);
+          a[SLOT_PRE]=pr? suma(ser,pa,pb) : 0;
+          GEO_MES[c][e]=a;
+        }); });
+        /* CP: GEO_CP_SEM guarda 8 CPs por par; re-rankeamos por el rango elegido
+           y publicamos el top 6 real de esas semanas, no el top 6 del ano. */
+        Object.keys(GEO_CP).forEach(function(k){
+          var n=OGCP[k].t.length, src=GEO_CP_SEM[k];
+          if(!src){ GEO_CP[k]={c:[], t:new Array(n).fill(0)}; return; }
+          var filas=src.c.map(function(x){ return {cp:x[0],col:x[1],
+            act:suma(x[2],S.desde,S.hasta), pre:pr? suma(x[2],pa,pb):0}; })
+            .sort(function(x,y){ return y.act-x.act; }).slice(0,6);
+          var tt=new Array(n).fill(0);
+          tt[SLOT_ACT]=suma(src.t,S.desde,S.hasta); tt[SLOT_PRE]=pr? suma(src.t,pa,pb):0;
+          GEO_CP[k]={c:filas.map(function(f){ var a=new Array(n).fill(0);
+            a[SLOT_ACT]=f.act; a[SLOT_PRE]=f.pre; return [f.cp,f.col,a]; }), t:tt};
+        });
+      }
     }
     function restaura(){
       CS.forEach(function(c){ CATS.forEach(function(k){ QUEJAS_MES[c][k.key]=ORIG[c][k.key].slice(); }); });
       ALL_MONTHS[SLOT_PRE]=OM[0]; ALL_MONTHS[SLOT_ACT]=OM[1];
       CS.forEach(function(c){ RAW[c].env=ORAW[c].env.slice(); RAW[c].tix=ORAW[c].tix.slice(); RAW[c].cr=ORAW[c].cr.slice(); });
+      if(HAYGEO){
+        CS.forEach(function(c){ Object.keys(OGEO[c]).forEach(function(e){ GEO_MES[c][e]=OGEO[c][e].slice(); }); });
+        Object.keys(OGCP).forEach(function(k){
+          GEO_CP[k]={c:OGCP[k].c.map(function(x){ return [x[0],x[1],x[2].slice()]; }), t:OGCP[k].t.slice()}; });
+      }
     }
     function selMes(de,a){
       var d=document.getElementById("qfDesde"), h=document.getElementById("qfHasta");
@@ -2678,7 +2717,7 @@ function renderSemanalInit() {
       inyecta();
       selMes(SLOT_ACT,SLOT_ACT);
       renderQuejas();
-      geo(true);
+      geo(!HAYGEO);   /* solo se oculta si data.js no trae la geo semanal */
       barrasWow();
       info();
     }
