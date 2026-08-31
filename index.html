@@ -2847,12 +2847,15 @@ function renderSemanalInit() {
 
     /* Cualquier otro control del sidebar (carriers, nombres, metrica) puede repintar la
        pestana por su cuenta y borrar la nota del pie. Se vuelve a aplicar, es barato. */
+    /* En captura: el handler del ranking de estados detiene la propagacion, asi que
+       en fase de burbuja este listener nunca corria y el aviso de "sin concentracion"
+       no llegaba a aplicarse. */
     document.addEventListener("click",function(){
       setTimeout(function(){
         if(S.modo==="sem" && host.classList.contains("active")){ postGeo(); }
         revisaCP();
       },280);
-    },false);
+    },true);
     document.getElementById("qsD").value=S.desde;
     document.getElementById("qsH").value=S.hasta;
     return true;
