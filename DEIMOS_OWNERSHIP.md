@@ -17,7 +17,7 @@ Trackea **Ticket Rate / 1k envíos** y **Delivery Rate** para DHL, Estafeta y 99
 
 ```
 index.html   ← app: HTML + CSS + lógica de render. Casi nunca se toca.
-data.js      ← TODA la data + el pie de estado. Único archivo que editas cada ciclo. (~11 KB)
+data.js      ← TODA la data + el pie de estado. Único archivo que editas cada ciclo. (~146 KB)
 README.md
 ```
 
@@ -42,7 +42,9 @@ README.md
 | `SEM_WEEKS` / `SEM_LABELS` | Semanas lunes–domingo (ISO) |
 | `SEM_DATA` | `env` / `tix` / `tr` semanal por carrier |
 | `QUEJAS_CATS` / `QUEJAS_MES` | Motivos de queja: catálogo y desglose mensual por carrier (ver §9) |
+| `QUEJAS_SEM` | Motivos por **semana**, alineado a `SEM_WEEKS` (ver §13) |
 | `GEO_ESTADOS` / `GEO_MES` / `GEO_CP` | Geografía de las quejas: estado y CP (ver §10) |
+| `GEO_SEM` / `GEO_CP_SEM` | Geografía por **semana** (ver §13) |
 | `DES_DIA` / `DES_LAG` / `DES_EST` | Desfase, cohortes y series diarias (ver §11) |
 
 Todos los arrays de un mismo bloque deben tener **exactamente la misma longitud** que `ALL_MONTHS` (o `SEM_WEEKS`).
@@ -495,6 +497,59 @@ población del TR/1k y sería lo ideal.
   `<0` y son error de captura del agente.
 - La col. K solo está en el 86% de los tickets, así que el histograma `form`
   corre sobre 16,128 filas y no sobre las 19,021.
+
+---
+
+## 13. Modo semana de la pestaña de quejas
+
+Agregado el 31 ago 2026. La pestaña tiene un toggle **Por mes / Por semana**. En "Por mes"
+todo se comporta como siempre. En "Por semana" la dona, los 4 KPIs, la tabla de detalle,
+el ranking de estados y el drill-down a CP **son los mismos**, solo con datos semanales.
+
+### Cómo funciona (importante antes de tocarlo)
+
+No hay una segunda implementación de la pestaña. El bloque al final de `index.html`
+escribe el rango de semanas elegido en **dos slots** de `QUEJAS_MES`, `RAW`, `GEO_MES` y
+`GEO_CP` — slot 1 = rango actual, slot 0 = rango previo del mismo largo —, pone el filtro
+mensual original en ese slot y llama `renderQuejas()`. Efectos de eso:
+
+- La columna **"vs. previo"** del ranking de estados compara semana contra semana sin
+  ningún código nuevo, porque el slot previo trae justo el rango anterior.
+- Las etiquetas de esos dos slots en `ALL_MONTHS` se sobrescriben con el rango, para que
+  los sub-títulos y el `TR/1k prom` salgan bien. Los botones de MESES del sidebar se
+  construyen una sola vez, así que no se ven afectados.
+- `QUEJAS_MES`, `RAW`, `ALL_MONTHS`, `GEO_MES` y `GEO_CP` son globales que otras pestañas
+  leen. Al volver a "Por mes" se restauran, y **cualquier clic en el sidebar en modo
+  semana regresa a mes antes de navegar**. Si algún día tocas esa red de seguridad,
+  cuida que nadie más vea los datos inyectados.
+
+Lo único que se agrega visualmente en modo semana es una gráfica de barras arriba:
+motivos del periodo actual contra el previo, por carrier.
+
+### Los tres bloques semanales
+
+| Bloque | Qué es |
+|---|---|
+| `QUEJAS_SEM` | Motivos por carrier y semana. Suma exactamente `SEM_DATA[carrier].tix` |
+| `GEO_SEM` | Estado por carrier y semana, con `ND` explícito |
+| `GEO_CP_SEM` | **Top 8** CPs por par `carrier|estado`, serie semanal |
+
+**Se regeneran cada ciclo, igual que sus equivalentes mensuales.** Misma query del §4/paso 4
+y del §10, pero bucketeando al lunes de cada fecha en vez de al mes.
+
+⚠️ Son **8** CPs y no 6 a propósito. El top 6 del año no sirve para una semana suelta: en
+7 días un par como `99min|EM` reparte ~50 tickets entre muchos CPs y los líderes anuales
+pueden salir en cero. El bloque de `index.html` re-rankea esos 8 y publica el top 6 real
+del rango elegido.
+
+⚠️ El total de los tres bloques **no cuadra con `RAW.tix`**, y está bien: la semana parcial
+del 29-dic-2025 no se publica en `SEM_WEEKS`, así que quedan 249 tickets fuera. Contra lo
+que sí deben cuadrar es contra `SEM_DATA[carrier].tix` (773 / 9,755 / 9,053 al corte del
+30-ago-2026).
+
+> El bloque se desactiva solo si falta `QUEJAS_SEM`, y si faltan `GEO_SEM` / `GEO_CP_SEM`
+> oculta las dos tarjetas de geografía en modo semana en lugar de mostrar números
+> mensuales disfrazados de semanales. Un `data.js` viejo no rompe la pestaña.
 
 ---
 
