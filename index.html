@@ -2817,9 +2817,6 @@ function renderSemanalInit() {
       }
     }
 
-    /* el ranking de estados llena la tarjeta de CP al hacer clic, asi que hay que
-       revisarla despues de cada clic dentro de la pestana, no solo tras el render. */
-    host.addEventListener("click",function(){ setTimeout(revisaCP,260); });
     barra.addEventListener("click",function(e){ var b=e.target.closest("[data-modo]"); if(b) modo(b.dataset.modo); });
     ctrl.addEventListener("click",function(e){ var b=e.target.closest("[data-pre]"); if(!b) return;
       var n=+b.dataset.pre; S.hasta=NW-1; S.desde=Math.max(0,NW-n); pinta(); });
@@ -2829,12 +2826,33 @@ function renderSemanalInit() {
       else return;
       pinta(); });
 
-    /* QUEJAS_MES, RAW y ALL_MONTHS son globales que otras pestanas tambien leen.
-       Si el usuario sale de esta vista en modo semana, volvemos a mes primero
-       para que nadie mas vea los datos inyectados. */
-    document.querySelectorAll(".sidebar a,.sidebar button,aside a,aside button").forEach(function(b){
+    /* QUEJAS_MES, RAW, ALL_MONTHS, GEO_MES y GEO_CP son globales que otras pestanas
+       tambien leen, asi que hay que restaurarlos antes de que alguien mas los vea.
+
+       Antes esto colgaba de un listener en TODO el sidebar, y salia mal: los toggles de
+       carrier y de nombres no navegan a ningun lado, pero disparaban el regreso a modo
+       mes y te sacaban de la vista semanal a media revision. Ahora se observa la
+       visibilidad de la pestana, que es la señal correcta. */
+    var obs=new MutationObserver(function(){
+      if(S.modo==="sem" && !host.classList.contains("active")) modo("mes");
+    });
+    obs.observe(host,{attributes:true,attributeFilter:["class"]});
+
+    /* Los botones de MESES del sidebar si son incompatibles con el modo semana:
+       mueven la seleccion de meses sobre la que montamos los slots. */
+    document.querySelectorAll(".sidebar button,aside button").forEach(function(b){
+      if(!/^(Ene|Feb|Mar|Abr|May|Jun|Jul|Ago|Sep|Oct|Nov|Dic) ?\d{2}\*?$/.test((b.innerText||"").trim())) return;
       b.addEventListener("click",function(){ if(S.modo==="sem") modo("mes"); },true);
     });
+
+    /* Cualquier otro control del sidebar (carriers, nombres, metrica) puede repintar la
+       pestana por su cuenta y borrar la nota del pie. Se vuelve a aplicar, es barato. */
+    document.addEventListener("click",function(){
+      setTimeout(function(){
+        if(S.modo==="sem" && host.classList.contains("active")){ postGeo(); }
+        revisaCP();
+      },280);
+    },false);
     document.getElementById("qsD").value=S.desde;
     document.getElementById("qsH").value=S.hasta;
     return true;
