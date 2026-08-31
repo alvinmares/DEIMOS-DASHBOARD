@@ -2544,7 +2544,8 @@ function renderSemanalInit() {
 
   function arranca(){
     var filtro=document.getElementById("quejasFiltro");
-    if(!filtro) return false;
+    var host=document.getElementById("quejas");
+    if(!filtro||!host) return false;
     if(document.getElementById("qsBarra")) return true;
 
     var CS=["DHL","Estafeta","99min"], CATS=QUEJAS_CATS, NW=SEM_WEEKS.length;
