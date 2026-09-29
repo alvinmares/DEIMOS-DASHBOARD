@@ -114,7 +114,8 @@ en `mensaje`, porque esa línea se muestra en el dashboard.
 | Col | Campo |
 |---|---|
 | A | `Marca temporal` |
-| H | `Elige la Mensajería` → `DHL` / `Estafeta` / `99 Minutos` |
+| F | `Código de Envío (Dispatch Code)` → **decide el carrier** (ver §3.1) |
+| H | `Elige la Mensajería` → `DHL` / `Estafeta` / `99 Minutos` — la elige el agente a mano; solo es respaldo (§3.1) |
 | I | `¿Cómo te ayudamos?` (motivo de nivel 1) |
 | J | `Estado registrado en el Shipping address` (código de 2 letras) |
 | M | `CP verificado en SEPOMEX` |
@@ -139,6 +140,59 @@ Sus 3 valores suman exactamente los tickets de "Problemas con la Mensajería" (9
 2026 YTD), y viene vacía en el resto. Hoy el dash no la usa.
 
 ⚠️ **Filtra siempre `H` a los tres nombres exactos.** Hay filas basura donde `H` trae un UUID en lugar del carrier (form mal versionado). Sin el filtro los conteos se inflan.
+
+### 3.1 El carrier lo decide la guía, no la col. H
+
+Agregado el 28 sep 2026, activo desde el ciclo del 1 oct 2026. La col. H la elige el
+agente a mano y **~1% viene mal**: en la semana 21–27 sep 2026 fueron 5 de 542
+tickets (2 Estafeta→99 Minutos, 99 Minutos→DHL, Estafeta→DHL, DHL→99 Minutos), y en
+2026 YTD hay **136** detectables solo por formato. Se descubrió al armar los CSV de
+guías por carrier para los reportes semanales: los totales ya no empataban con los
+del post. Se corrige aquí, en el origen, para que el TR/1k, las quejas, la geografía,
+el reporte semanal y los CSV cuadren entre sí.
+
+**Regla:** el carrier de cada ticket lo decide el código de la col. F; la col. H solo
+se usa cuando el código no se puede resolver.
+
+1. **Normaliza F:** quita el texto `Destinatario`, parte por `yel` (agentes que pegan
+   el código dos veces) y usa el primer código.
+2. **Reglas de formato** — gratis, se aplican en el JS a **todo el año** en cada ciclo:
+
+   | Formato en col. F | Carrier |
+   |---|---|
+   | `^N\d{6}C\d{6}$` | 99 Minutos |
+   | `^N\d{6}E\d{6}$` | Estafeta |
+   | `^N\d{6}D\d{6}$` | DHL |
+   | 22 caracteres alfanuméricos | Estafeta |
+
+   La letra de la referencia acierta en >99.9% (verificado contra `frodo__deliveries`
+   2026: 1,320,589 de 1,320,715 referencias `C` son 99 Minutos).
+3. **UUID (`package_id`) y 10 dígitos** necesitan Frodo. Solo se resuelven los de la
+   **ventana nueva** de cada ciclo (Marca temporal posterior a la última ventana
+   resuelta; suelen ser 50–100 códigos), con una query que une por
+   `delivery__package_id` y `delivery__carrier_code`. Para sacar los códigos del
+   navegador sin que `javascript_tool` los trunque (~1.3k caracteres), se escriben en un
+   `<pre>` con `document.createElement` (el Sheet exige TrustedHTML) y se leen con
+   `get_page_text`.
+4. **Un código de 10 dígitos que no existe en Frodo NO se reatribuye.** Casi siempre es
+   el teléfono del cliente capturado por error en el campo de guía (~20 por semana en
+   sep 2026). Se queda con la col. H.
+5. **Caché:** los resueltos por Frodo cuyo carrier difiere de H se guardan en
+   `DEIMOS_reatribucion_carrier.json` (carpeta local *Carrier Operations* del owner,
+   no en el repo: trae códigos de guía). Se lee al inicio de cada ciclo y se aplica a
+   todo el año junto con las reglas de formato.
+6. **Aplica la reatribución a todas las agregaciones** — tickets, quejas, geografía y
+   series diarias, por mes y por semana — o el validador del pie no cuadra.
+7. Anota en `DATA_META.notas` cuántos tickets se reatribuyeron y en qué dirección. Si en
+   una ventana pasa del 3%, algo cambió en la captura del formulario: repórtalo.
+
+> **Limitación conocida:** los UUID y 10 dígitos anteriores a la creación del caché
+> (28 sep 2026) se quedan con la col. H — resolver ~5,300 códigos del año cuesta lo
+> mismo que el join de §11. Son ~25% de las filas con un error esperado <1%.
+>
+> **Primera corrida con la regla:** los meses históricos se mueven unos pocos tickets
+> por las reglas de formato. Es reatribución, no backfill de Frodo: decláralo en
+> `notas`.
 
 ---
 
@@ -227,6 +281,8 @@ await tq(`select month(A), day(A), H, count(A)
 Desde el detalle diario armas mes y semana (lunes–domingo) y cortas donde quieras. Requiere `tqx=out:csv` — `out:json` pide OAuth y falla.
 
 > El CSV crudo son ~15 KB y no cabe de un jalón en la respuesta de la herramienta. Agrega en el mismo JS (arma los buckets de mes y semana ahí) y devuelve sólo los totales.
+
+> **Incluye la col. F en el `select`** y aplica la reatribución de §3.1 antes de armar cualquier bucket: todas las agregaciones van por el carrier reatribuido, no por la col. H cruda.
 
 ### Paso 5 — Calcular
 
@@ -598,6 +654,8 @@ que sí deben cuadrar es contra `SEM_DATA[carrier].tix` (773 / 9,755 / 9,053 al 
 Delivery Rate (higher is better): 🟢 ≥ 90 · 🟡 85–90 · 🟠 75–85 · 🔴 < 75
 
 ---
+
+*28 sep 2026: reatribución de carrier por guía (§3.1), activa desde el ciclo del 1 oct 2026.*
 
 *Actualizado: 31 ago 2026 — datos al 30 ago 2026 (agosto parcial)*
 
